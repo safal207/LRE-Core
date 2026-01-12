@@ -9,4 +9,4 @@
 	url = https://github.com/safal207/Living-Relational-Identity-LRI
 [submodule "src/ltp"]
 	path = src/ltp
-	url = https://github.com/safal207/Liminal-Transport-Protocol-LTP
+	url = https://github.com/safal207/L-THREAD-Liminal-Thread-Secure-Protocol-LTP-
