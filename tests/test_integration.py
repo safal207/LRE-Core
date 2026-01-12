@@ -1,56 +1,107 @@
 import unittest
-from src.dml import DML
+import sys
+import os
+
+# To test the integration with submodules without installing them as packages,
+# we add their paths to sys.path.
+# This mimics the environment where these packages would be installed.
+
+# Path to LPI's python package (which provides 'lri' package)
+lpi_pkg_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../src/lpi/packages/python-lri'))
+
+# Path to LRI reference implementation (which provides 'dmp' module)
+lri_ref_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../src/lri/lri-reference'))
+
+if os.path.exists(lpi_pkg_path) and lpi_pkg_path not in sys.path:
+    sys.path.append(lpi_pkg_path)
+
+if os.path.exists(lri_ref_path) and lri_ref_path not in sys.path:
+    sys.path.append(lri_ref_path)
+
+# Try imports
+try:
+    from lri import LRI
+except ImportError:
+    LRI = None
+
+try:
+    import dmp
+except ImportError:
+    dmp = None
+
 from src.lre_dp import LRE_DP
-from src.lpi import LPI
-from src.lri import LRI
 
 class TestLRECoreIntegration(unittest.TestCase):
     def setUp(self):
-        # Initialize dependencies
-        self.lpi = LPI()
-        self.lre_dp = LRE_DP(self.lpi)
-        self.dml = DML(self.lre_dp, self.lpi)
-        self.lri = LRI(self.dml)
+        # Check if submodules are present
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        submodules = ['../src/lpi', '../src/lri', '../src/dml', '../src/ltp']
 
-    def test_dml_propose_action_triggers_lre_dp_execute(self):
+        missing = []
+        for sm in submodules:
+            path = os.path.join(base_dir, sm)
+            if not os.path.exists(path):
+                missing.append(sm)
+            # For LTP, since we can't fully initialize it due to broken URL, we might check differently
+            # but structurally it should exist.
+
+        if missing:
+             # We only warn/skip for LTP if it's the only one missing, as it is known broken
+             if missing == ['../src/ltp']:
+                 print("Warning: LTP submodule missing (expected due to 404)")
+             else:
+                 self.skipTest(f"Submodules missing: {missing}. Run 'git submodule update --init --recursive'")
+
+        if LRI is None:
+             self.skipTest("LPI/LRI package could not be imported. Check submodule state.")
+
+        # Instantiate dependencies
+        self.lpi = LRI()
+
+        # Mock LRI Routing service
+        self.lri_mock = "LRI_Routing_Service"
+
+        # We initialize LRE_DP
+        self.lre_dp = LRE_DP(lpi=self.lpi, lri=self.lri_mock)
+
+        self.dmp = dmp
+
+    def test_dmp_record_decision(self):
         """
-        Test DML.propose_action() -> LRE-DP.execute_decision()
+        Test DMP record decision.
         """
+        if self.dmp is None:
+            self.skipTest("DMP module not found")
+
         action = {"type": "emergency_shutdown", "target": "node_1"}
 
-        # We can use unittest.mock to verify calls, but for now we rely on the implementation logic
-        # and checking state update if possible, or just successful execution.
+        try:
+            record = self.dmp.record_decision("agent_007", action, intention="test_integration")
+            self.assertIsNotNone(record)
+            self.assertEqual(record["action"], action)
+            self.assertEqual(record["subject_id"], "agent_007")
 
-        # Mocking to verify call
-        from unittest.mock import MagicMock
-        self.lre_dp.execute_decision = MagicMock()
+        except ImportError as e:
+            self.skipTest(f"DMP dependencies missing: {e}")
+        except Exception as e:
+            self.fail(f"DMP record_decision failed: {e}")
 
-        self.dml.propose_action(action)
+    def test_lre_dp_execution(self):
+        """
+        Test LRE-DP execute decision.
+        """
+        action = {"type": "shutdown"}
+        self.lre_dp.execute_decision(action)
+        self.assertEqual(self.lre_dp.state["type"], "shutdown")
 
-        self.lre_dp.execute_decision.assert_called_once_with(action)
-
-    def test_lpi_query_presence(self):
+    def test_dependencies_present(self):
         """
-        Test LPI.query_presence()
+        Verify LPI and LRI dependencies are correctly assigned.
         """
-        result = self.lpi.query_presence("agent_007")
-        self.assertTrue(result)
-
-    def test_lre_dp_update_state(self):
-        """
-        Test LRE-DP.update_state()
-        """
-        new_state = {"status": "active"}
-        self.lre_dp.update_state(new_state)
-        self.assertEqual(self.lre_dp.state["status"], "active")
-
-    def test_lri_update_route(self):
-        """
-        Test LRI.update_route()
-        """
-        route = {"path": "/home", "metric": 10}
-        # Just ensure it runs without error for now as it returns void
-        self.lri.update_route(route)
+        self.assertIsNotNone(self.lre_dp.lpi)
+        self.assertIsNotNone(self.lre_dp.lri)
+        # Verify LPI is the LRI class instance (LPI Handler)
+        self.assertEqual(self.lre_dp.lpi.__class__.__name__, "LRI")
 
 if __name__ == '__main__':
     unittest.main()

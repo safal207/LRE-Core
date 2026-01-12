@@ -1,0 +1,12 @@
+[submodule "src/lpi"]
+	path = src/lpi
+	url = https://github.com/safal207/Liminal-Presence-Interface-LPI
+[submodule "src/dml"]
+	path = src/dml
+	url = https://github.com/safal207/DMP-decision-memory-protocol
+[submodule "src/lri"]
+	path = src/lri
+	url = https://github.com/safal207/Living-Relational-Identity-LRI
+[submodule "src/ltp"]
+	path = src/ltp
+	url = https://github.com/safal207/L-THREAD-Liminal-Thread-Secure-Protocol-LTP-
