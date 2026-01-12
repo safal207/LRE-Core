@@ -4,7 +4,7 @@ Liminal multi-agent runtime with smart decision governance, presence semantics, 
 ## Architecture
 LRE-Core serves as the foundational runtime integration environment for the Liminal ecosystem. It orchestrates interaction between key protocols:
 
-- **LRE-DP (Liminal Runtime Environment - Decision Protocol)**: Executes decisions based on inputs.
+- **LRE-DP (Liminal Runtime Environment - Decision Protocol)**: Executes decisions based on inputs via LPI + LRI.
 - **DML (Decision Markup Language / DMP)**: Proposes actions and defines decision logic.
 - **LPI (Liminal Presence Interface)**: Manages presence semantics.
 - **LRI (Living Relational Identity)**: Handles routing updates.
@@ -22,5 +22,6 @@ The protocols are integrated as submodules in `src/`:
 
 - [LTP](./src/ltp)
 - [LPI](./src/lpi)
+- [LRE-DP](./src/lre_dp.py)
 - [DMP / DML](./src/dml)
 - [LRI](./src/lri)

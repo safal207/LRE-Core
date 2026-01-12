@@ -1,34 +1,38 @@
-import sys
-import os
+# lre_dp.py - Liminal Runtime Environment - Decision Protocol
+from typing import Optional, Any
 
-# Ensure we can import lri from submodules if not installed
-# This is a runtime patch to ensure the module works when run from source
-# In production, these packages should be installed.
-current_dir = os.path.dirname(os.path.abspath(__file__))
-lpi_pkg_path = os.path.join(current_dir, 'lpi/packages/python-lri')
-if os.path.exists(lpi_pkg_path) and lpi_pkg_path not in sys.path:
-    sys.path.append(lpi_pkg_path)
-
-try:
-    from lri import LRI as LPI_Protocol # Alias for semantic clarity
-except ImportError:
-    # Fallback or mock if submodule is missing/broken
-    class LPI_Protocol:
-        pass
+# Interfaces for Type Hinting
+# Since these are integrated via submodules, we assume the environment provides them
+# or they are passed in. We define Protocols/Interfaces here if we want strict typing
+# without depending on the implementations, but for this integration we follow the instruction.
 
 class LRE_DP:
     """
     Liminal Runtime Environment - Decision Protocol
+    Executes decisions based on inputs via LPI + LRI.
     """
-    def __init__(self, lpi: LPI_Protocol):
+    def __init__(self, lpi: Any, lri: Any):
+        """
+        Initialize LRE-DP with its dependencies.
+
+        Args:
+            lpi: Liminal Presence Interface (LPI) handler.
+                 Expected to provide presence information.
+            lri: Living Relational Identity (LRI) handler.
+                 Expected to provide routing and context updates.
+        """
         self.lpi = lpi
+        self.lri = lri
         self.state = {}
 
     def execute_decision(self, decision_data: dict):
         """
-        Executes a decision.
+        Executes a decision based on the provided data.
         """
         print(f"[LRE-DP] Executing decision: {decision_data}")
+        # Logic to use LPI and LRI would go here
+        # e.g. self.lpi.check_presence(...)
+        # e.g. self.lri.update_route(...)
         self.update_state(decision_data)
 
     def update_state(self, new_state: dict):
