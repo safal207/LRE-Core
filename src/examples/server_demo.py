@@ -49,7 +49,7 @@ async def main():
     logger.info(f"Starting WebSocket server on {host}:{port}")
 
     async with websockets.serve(
-        lambda ws, path: handle_client(ws, runtime),
+        lambda ws: handle_client(ws, runtime),
         host,
         port
     ):
