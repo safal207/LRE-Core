@@ -25,3 +25,29 @@ The protocols are integrated as submodules in `src/`:
 - [LRE-DP](./src/lre_dp.py)
 - [DMP / DML](./src/dml)
 - [LRI](./src/lri)
+
+## Web UI Dashboard
+
+A visual interface for testing the Liminal Runtime.
+
+### Usage
+
+1. Start the LTP server:
+   ```bash
+   python src/examples/server_demo.py
+   ```
+
+2. Open the dashboard:
+   ```bash
+   open src/examples/dashboard.html
+   # Or just double-click the file
+   ```
+
+3. The dashboard will automatically connect to ws://localhost:8000
+
+### Features
+
+- Real-time WebSocket connection
+- Quick action buttons (Ping, Echo, Custom)
+- Live event stream with latency tracking
+- Minimalist UI aligned with Liminal brand

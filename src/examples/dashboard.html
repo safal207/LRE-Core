@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Liminal Runtime Dashboard</title>
+    <style>
+        /* Design System */
+        :root {
+            --liminal-void: #0a0e27;      /* Background */
+            --liminal-surface: #1a1f3a;   /* Cards */
+            --liminal-border: #2a3354;    /* Borders */
+            --liminal-mist: #c5d3e8;      /* Primary text */
+            --liminal-mist-dim: #8b9bb8;  /* Secondary text */
+            --liminal-glow: #64ffda;      /* Accent/CTA */
+            --liminal-warm: #ffb4ab;      /* Received messages */
+            --liminal-error: #ff6b6b;     /* Errors */
+            --liminal-success: #51cf66;   /* Success */
+            --liminal-cyan: #00bcd4;      /* System messages */
+
+            --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro', system-ui, sans-serif;
+            --radius-btn: 8px;
+            --radius-card: 12px;
+            --spacing-sm: 0.5rem;
+            --spacing-md: 1rem;
+            --spacing-lg: 1.5rem;
+            --transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--liminal-void);
+            color: var(--liminal-mist);
+            font-family: var(--font-family);
+            line-height: 1.5;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            padding: var(--spacing-lg);
+        }
+
+        .container {
+            width: 100%;
+            max-width: 800px;
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-lg);
+        }
+
+        /* Header */
+        header {
+            text-align: center;
+            padding: var(--spacing-md);
+            border: 1px solid var(--liminal-border);
+            border-radius: var(--radius-card);
+            background-color: var(--liminal-surface);
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .tagline {
+            color: var(--liminal-mist-dim);
+            font-size: 0.9rem;
+        }
+
+        /* Status Bar */
+        .status-bar {
+            background-color: var(--liminal-surface);
+            border: 1px solid var(--liminal-border);
+            border-radius: var(--radius-card);
+            padding: var(--spacing-md);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.9rem;
+            font-family: monospace;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+
+        .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: var(--liminal-error);
+            transition: var(--transition);
+        }
+
+        .dot.connected {
+            background-color: var(--liminal-success);
+            box-shadow: 0 0 8px var(--liminal-success);
+        }
+
+        .latency-badge {
+            color: var(--liminal-mist-dim);
+        }
+
+        .connection-url {
+            color: var(--liminal-mist-dim);
+        }
+
+        /* Quick Actions */
+        .quick-actions {
+            background-color: var(--liminal-surface);
+            border: 1px solid var(--liminal-border);
+            border-radius: var(--radius-card);
+            padding: var(--spacing-lg);
+        }
+
+        h2 {
+            font-size: 1.1rem;
+            margin-bottom: var(--spacing-md);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+
+        .actions-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: var(--spacing-md);
+        }
+
+        button {
+            background-color: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--liminal-border);
+            border-radius: var(--radius-btn);
+            color: var(--liminal-mist);
+            padding: var(--spacing-md);
+            cursor: pointer;
+            transition: var(--transition);
+            font-family: var(--font-family);
+            font-size: 0.9rem;
+        }
+
+        button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            border-color: var(--liminal-glow);
+            box-shadow: 0 4px 12px rgba(100, 255, 218, 0.1);
+        }
+
+        button:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        button.danger {
+            border-color: rgba(255, 107, 107, 0.3);
+            color: var(--liminal-error);
+        }
+
+        button.danger:hover:not(:disabled) {
+            border-color: var(--liminal-error);
+            box-shadow: 0 4px 12px rgba(255, 107, 107, 0.1);
+            background-color: rgba(255, 107, 107, 0.05);
+        }
+
+        /* Event Stream */
+        .event-stream {
+            background-color: var(--liminal-surface);
+            border: 1px solid var(--liminal-border);
+            border-radius: var(--radius-card);
+            padding: var(--spacing-lg);
+            display: flex;
+            flex-direction: column;
+            flex-grow: 1;
+            min-height: 400px;
+        }
+
+        .stream-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--spacing-md);
+        }
+
+        .log-container {
+            background-color: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--liminal-border);
+            border-radius: var(--radius-btn);
+            padding: var(--spacing-md);
+            height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 0.85rem;
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-sm);
+        }
+
+        /* Scrollbar Styling */
+        .log-container::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .log-container::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .log-container::-webkit-scrollbar-thumb {
+            background-color: var(--liminal-border);
+            border-radius: 4px;
+        }
+
+        .log-entry {
+            display: flex;
+            gap: var(--spacing-sm);
+            padding-bottom: 4px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .log-time {
+            color: var(--liminal-mist-dim);
+            min-width: 65px;
+        }
+
+        .log-type {
+            font-weight: bold;
+            min-width: 60px;
+        }
+
+        .type-system { color: var(--liminal-cyan); }
+        .type-sent { color: var(--liminal-success); }
+        .type-recv { color: var(--liminal-warm); }
+        .type-error { color: var(--liminal-error); }
+
+        .log-content {
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        .empty-state {
+            color: var(--liminal-mist-dim);
+            text-align: center;
+            margin-top: 2rem;
+            font-style: italic;
+        }
+
+        .stream-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: var(--spacing-md);
+            font-size: 0.85rem;
+            color: var(--liminal-mist-dim);
+        }
+
+        .btn-sm {
+            padding: 4px 12px;
+            font-size: 0.8rem;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <h1>🌊 Liminal Runtime</h1>
+            <div class="tagline">AI Governance Layer • Presence-Aware Decisions</div>
+        </header>
+
+        <!-- Status Bar -->
+        <div class="status-bar">
+            <div class="status-indicator">
+                <div id="status-dot" class="dot"></div>
+                <span id="status-text">Disconnected</span>
+            </div>
+            <div class="latency-badge">Latency: <span id="latency-value">--</span>ms</div>
+            <div class="connection-url">ws://localhost:8000</div>
+        </div>
+
+        <!-- Quick Actions -->
+        <section class="quick-actions">
+            <h2>⚡ Quick Actions</h2>
+            <div class="actions-grid">
+                <button id="btn-ping" onclick="sendPing()">System Ping</button>
+                <button id="btn-echo" onclick="sendEcho()">Echo Test</button>
+                <button id="btn-custom" onclick="sendCustom()">Custom Payload</button>
+                <button id="btn-shutdown" class="danger" onclick="sendShutdown()">Shutdown</button>
+            </div>
+        </section>
+
+        <!-- Event Stream -->
+        <section class="event-stream">
+            <div class="stream-header">
+                <h2>📡 Event Stream</h2>
+                <div class="live-indicator" style="display: flex; align-items: center; gap: 6px; font-size: 0.8rem; color: var(--liminal-success);">
+                    <span class="dot connected" style="width: 8px; height: 8px;"></span> Live
+                </div>
+            </div>
+
+            <div id="log-container" class="log-container">
+                <div class="empty-state">Waiting for connection...</div>
+            </div>
+
+            <div class="stream-footer">
+                <span id="event-count">0 events</span>
+                <button class="btn-sm" onclick="clearLog()">Clear Log</button>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        // --- Configuration ---
+        const WS_URL = 'ws://localhost:8000';
+        const AGENT_ID = 'dashboard_client';
+
+        // --- State ---
+        let ws = null;
+        let isConnected = false;
+        let eventCount = 0;
+        let pendingRequests = new Map(); // timestamp -> action name (for latency tracking)
+
+        // --- DOM Elements ---
+        const statusDot = document.getElementById('status-dot');
+        const statusText = document.getElementById('status-text');
+        const latencyValue = document.getElementById('latency-value');
+        const logContainer = document.getElementById('log-container');
+        const eventCountEl = document.getElementById('event-count');
+
+        const btnPing = document.getElementById('btn-ping');
+        const btnEcho = document.getElementById('btn-echo');
+        const btnCustom = document.getElementById('btn-custom');
+        const btnShutdown = document.getElementById('btn-shutdown');
+        const allButtons = [btnPing, btnEcho, btnCustom, btnShutdown];
+
+        // --- WebSocket Logic ---
+        function connect() {
+            addLog('SYSTEM', 'Connecting to ' + WS_URL + '...');
+
+            try {
+                ws = new WebSocket(WS_URL);
+            } catch (e) {
+                addLog('ERROR', 'Failed to create WebSocket: ' + e.message);
+                return;
+            }
+
+            ws.onopen = () => {
+                isConnected = true;
+                updateStatus(true);
+                addLog('SYSTEM', 'Connected to LTP server');
+                enableButtons(true);
+            };
+
+            ws.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    handleResponse(data);
+                } catch (e) {
+                    addLog('ERROR', 'Failed to parse message: ' + event.data);
+                }
+            };
+
+            ws.onerror = (error) => {
+                addLog('ERROR', 'Connection error');
+                console.error('WebSocket Error:', error);
+            };
+
+            ws.onclose = (event) => {
+                isConnected = false;
+                updateStatus(false);
+                addLog('SYSTEM', `Disconnected (Code: ${event.code})`);
+                enableButtons(false);
+
+                // Auto-reconnect after 3s
+                setTimeout(() => {
+                    if (!isConnected) connect();
+                }, 3000);
+            };
+        }
+
+        function sendCommand(action, payload = {}) {
+            if (!isConnected) {
+                addLog('ERROR', 'Not connected to server');
+                return;
+            }
+
+            const command = {
+                action: action,
+                agent_id: AGENT_ID,
+                payload: payload
+            };
+
+            try {
+                const jsonStr = JSON.stringify(command);
+                ws.send(jsonStr);
+
+                const timestamp = Date.now();
+                pendingRequests.set(timestamp, action); // Track for latency if needed, or rely on response timestamps
+
+                // For 'system_ping', we'll rely on our own tracking if response doesn't have it
+                // But server usually echoes back useful info.
+
+                addLog('SENT', action, payload);
+                return timestamp;
+            } catch (e) {
+                addLog('ERROR', 'Failed to send command: ' + e.message);
+            }
+        }
+
+        function handleResponse(data) {
+            // Calculate simplistic latency if possible
+            // In a real app we'd match request IDs. Here we estimate based on recent activity or payload
+
+            // Check for pong
+            if (data.message === 'pong') {
+                const now = Date.now();
+                // If payload has timestamp from server, we can use that if clocks are synced,
+                // but better to just use RTT if we tracked it.
+                // For simplicity as requested:
+                if (data.timestamp) {
+                    // This is server time.
+                }
+            }
+
+            // Just displaying latency for pongs/results if available or just update based on last action?
+            // The requirement says "Latency calculated from ping/pong"
+            // If the response is a result of a ping, we can calculate RTT.
+            // Since we don't have request IDs in this simple protocol, let's just
+            // assume the last request matches this response if we want strict latency,
+            // or just use the ping/pong mechanism.
+
+            // Actually, for the Status Bar latency, we should probably send periodic pings or
+            // update it when we receive a pong.
+
+            if (data.type === 'execution_result' || data.status === 'success') {
+                addLog('RECV', 'Response', data);
+            } else if (data.type === 'error') {
+                addLog('ERROR', data.message || 'Unknown error', data);
+            } else {
+                addLog('RECV', 'Message', data);
+            }
+
+            // Special handling for ping response (runtime returns direct dict, not wrapped in type=execution_result sometimes?)
+            // Based on stdlib: system_ping returns { "status": "success", "message": "pong", ... }
+            // Runtime wraps it?
+            // Looking at server_demo.py/test_client.py output:
+            // Received: { "status": "success", "message": "pong", ... }
+            // It seems it returns the result directly if it's not an error?
+            // Or `handle_client` logic:
+            // result = await runtime.execute_decision(...)
+            // response = result['result']
+            // await ws.send(json.dumps(response))
+
+            // So if action is system_ping, response is the dict from system_ping.
+            if (data.message === 'pong') {
+                // Calculate latency based on last ping?
+                // Since we don't have ID, let's assume it correlates to the last ping we sent.
+                // Or better, for the 'Latency: 23ms' display, we could insert a client-side timestamp in payload
+                // but system_ping doesn't return payload.
+                // We'll approximate or use server processing time if provided.
+
+                // Let's implement a "background ping" for the status bar if we wanted to be fancy,
+                // but for now let's just update latency when we do a manual ping or echo.
+
+                // If we want to show latency for *this* message:
+                // We can't easily without a request ID.
+                // However, the requirement says "Latency calculated from ping/pong".
+                // Let's cheat a bit and say if we just sent a ping, this is the response.
+            }
+        }
+
+        // --- UI Updates ---
+        function updateStatus(connected) {
+            if (connected) {
+                statusDot.className = 'dot connected';
+                statusText.innerText = 'Connected';
+            } else {
+                statusDot.className = 'dot';
+                statusText.innerText = 'Disconnected';
+                latencyValue.innerText = '--';
+            }
+        }
+
+        function enableButtons(enabled) {
+            allButtons.forEach(btn => btn.disabled = !enabled);
+        }
+
+        function addLog(type, title, data = null) {
+            // Remove empty state if present
+            if (eventCount === 0) {
+                logContainer.innerHTML = '';
+            }
+
+            eventCount++;
+            eventCountEl.innerText = `${eventCount} events`;
+
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('en-US', { hour12: false });
+
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+
+            let typeClass = 'type-system';
+            if (type === 'SENT') typeClass = 'type-sent';
+            if (type === 'RECV') typeClass = 'type-recv';
+            if (type === 'ERROR') typeClass = 'type-error';
+
+            let content = `<div class="log-content"><strong>${title}</strong>`;
+            if (data) {
+                content += `<br>${JSON.stringify(data, null, 2)}`;
+            }
+            content += `</div>`;
+
+            entry.innerHTML = `
+                <div class="log-time">${timeStr}</div>
+                <div class="log-type ${typeClass}">[${type}]</div>
+                ${content}
+            `;
+
+            logContainer.appendChild(entry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+
+        function clearLog() {
+            logContainer.innerHTML = '<div class="empty-state">Log cleared</div>';
+            eventCount = 0;
+            eventCountEl.innerText = '0 events';
+        }
+
+        // --- Button Handlers ---
+
+        // Track ping start time for latency calculation
+        let lastPingTime = 0;
+
+        function sendPing() {
+            lastPingTime = Date.now();
+            sendCommand('system_ping');
+        }
+
+        function sendEcho() {
+            const payload = {
+                message: "Hello from dashboard",
+                timestamp: Date.now()
+            };
+            sendCommand('echo_payload', payload);
+        }
+
+        function sendCustom() {
+            const input = prompt("Enter JSON payload:", '{"key": "value"}');
+            if (input) {
+                try {
+                    const payload = JSON.parse(input);
+                    sendCommand('echo_payload', payload); // Using echo for custom payload testing usually
+                    // Or did they want to specify action too?
+                    // Requirement: "Allows user to send custom JSON". "For advanced testing".
+                    // Usually this implies sending a payload to some action.
+                    // Let's assume it's for 'echo_payload' or we could ask for action name.
+                    // But to keep it simple as per "Custom Payload" button label, sending a payload to echo is safest.
+                    // WAIT: "Quick Actions" -> "Custom Payload" might imply generic action testing?
+                    // "Opens a simple prompt or inline input" -> "Allows user to send custom JSON".
+                    // Let's just send it to `echo_payload` as that's the safest generic test.
+                    // If I wanted to be more advanced, I'd ask for Action Name too.
+                    // Given the constraints, I'll stick to sending this as payload to echo_payload,
+                    // OR I can make a prompt that asks for the whole JSON command?
+                    // "Command: {"action": ...}"?
+                    // The button says "Custom Payload". I'll assume it means the payload for a generic test.
+                    // I will stick to sending it to `echo_payload` unless I see a reason otherwise.
+                    // Actually, let's do `echo_payload` to be safe.
+                } catch (e) {
+                    alert("Invalid JSON");
+                }
+            }
+        }
+
+        function sendShutdown() {
+            if (confirm("Are you sure you want to shut down the runtime?")) {
+                sendCommand('emergency_shutdown', { severity: 'normal' });
+            }
+        }
+
+        // --- Latency tracking override ---
+        // We hijack the send/recv to update the latency UI
+        const originalHandleResponse = handleResponse;
+        handleResponse = function(data) {
+            const now = Date.now();
+
+            // If it's a ping response (pong)
+            if (data.message === 'pong' && lastPingTime > 0) {
+                const latency = now - lastPingTime;
+                latencyValue.innerText = latency;
+                lastPingTime = 0; // reset
+            }
+
+            originalHandleResponse(data);
+        };
+
+        // Initialize
+        window.addEventListener('DOMContentLoaded', connect);
+
+    </script>
+</body>
+</html>
