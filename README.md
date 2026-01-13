@@ -1,5 +1,36 @@
 # LRE-Core
-Liminal multi-agent runtime with smart decision governance, presence semantics, and high-load emergency handling.
+
+[![Live Demo](https://img.shields.io/badge/🌊_Live_Demo-Try_Now-64ffda?style=for-the-badge)](https://safal207.github.io/LRE-Core/)
+[![Python](https://img.shields.io/badge/Python-3.8+-blue?style=flat-square)](https://www.python.org/)
+[![WebSocket](https://img.shields.io/badge/WebSocket-Enabled-green?style=flat-square)](https://github.com/safal207/LRE-Core)
+
+> Liminal multi-agent runtime with smart decision governance, presence semantics, and high-load emergency handling.
+
+## 🚀 Quick Start
+
+**Try the live dashboard:** [https://safal207.github.io/LRE-Core/](https://safal207.github.io/LRE-Core/)
+
+**Then run the server locally:**
+
+```bash
+# 1. Clone and setup
+git clone https://github.com/safal207/LRE-Core.git
+cd LRE-Core
+pip install -r requirements.txt
+
+# 2. Start the WebSocket server
+python src/examples/server_demo.py
+
+# 3. Open the live dashboard
+# Visit: https://safal207.github.io/LRE-Core/
+# Dashboard will auto-connect to your local server!
+```
+
+**Alternative (Local Only):**
+```bash
+# Just open the local file
+open src/examples/dashboard.html
+```
 
 ## Architecture
 LRE-Core serves as the foundational runtime integration environment for the Liminal ecosystem. It orchestrates interaction between key protocols:
@@ -28,26 +59,35 @@ The protocols are integrated as submodules in `src/`:
 
 ## Web UI Dashboard
 
-A visual interface for testing the Liminal Runtime.
+### 🌐 Live Demo (Hybrid Mode)
 
-### Usage
+**Hosted Dashboard:** [https://safal207.github.io/LRE-Core/](https://safal207.github.io/LRE-Core/)
 
-1. Start the LTP server:
-   ```bash
-   python src/examples/server_demo.py
-   ```
+This is a "hybrid app":
+- **Frontend:** Hosted on GitHub Pages (always available)
+- **Backend:** Runs locally on your machine (`ws://localhost:8000`)
 
-2. Open the dashboard:
-   ```bash
-   open src/examples/dashboard.html
-   # Or just double-click the file
-   ```
+**How it works:**
+1. Visit the live dashboard URL
+2. Run `python src/examples/server_demo.py` on your machine
+3. The hosted page connects to your local server
+4. You can share the URL with anyone - they just need to run the server locally
 
-3. The dashboard will automatically connect to ws://localhost:8000
+### 📁 Local Development
+
+For development, use the local copy:
+
+```bash
+# Start server
+python src/examples/server_demo.py
+
+# Open local dashboard
+open src/examples/dashboard.html
+```
 
 ### Features
-
-- Real-time WebSocket connection
-- Quick action buttons (Ping, Echo, Custom)
-- Live event stream with latency tracking
-- Minimalist UI aligned with Liminal brand
+- Real-time WebSocket connection with auto-reconnect
+- Live event stream with color-coded logs
+- Quick action buttons (Ping, Echo, Custom, Shutdown)
+- Latency tracking
+- Zero dependencies (pure HTML/CSS/JS)
