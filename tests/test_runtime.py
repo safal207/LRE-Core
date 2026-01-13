@@ -20,7 +20,15 @@ class TestLRERuntime(unittest.TestCase):
     def test_runtime_initialization(self):
         async def run_test():
             # Mock _init_protocols to avoid loading real modules or failing imports during test
-            with patch.object(self.runtime, '_init_protocols', new=AsyncMock()) as mock_init_proto:
+            with patch.object(self.runtime, '_init_protocols', new=AsyncMock()) as mock_init_proto, \
+                 patch('src.runtime.PersistenceEngine') as MockPersistence:
+
+                # Setup mock persistence
+                mock_persistence_instance = MockPersistence.return_value
+                mock_persistence_instance.initialize = AsyncMock()
+                mock_persistence_instance._on_decision_event = AsyncMock()
+                mock_persistence_instance.close = AsyncMock()
+
                 await self.runtime.initialize()
                 self.assertIsNotNone(self.runtime.pipeline)
                 self.assertTrue(self.runtime._running)
@@ -41,7 +49,14 @@ class TestLRERuntime(unittest.TestCase):
             self.runtime.lre_dp.execute_decision.return_value = {"status": "executed"}
 
             # Patch _init_protocols to NOT overwrite our mocks
-            with patch.object(self.runtime, '_init_protocols', new=AsyncMock()):
+            with patch.object(self.runtime, '_init_protocols', new=AsyncMock()), \
+                 patch('src.runtime.PersistenceEngine') as MockPersistence:
+
+                mock_persistence_instance = MockPersistence.return_value
+                mock_persistence_instance.initialize = AsyncMock()
+                mock_persistence_instance._on_decision_event = AsyncMock()
+                mock_persistence_instance.close = AsyncMock()
+
                 await self.runtime.initialize()
                 # Re-inject our mocks into pipeline because initialize() creates a new pipeline with current self.lpi etc.
                 # Since we set self.lpi BEFORE initialize, and patched _init_protocols to do nothing,
@@ -70,7 +85,14 @@ class TestLRERuntime(unittest.TestCase):
 
             self.runtime.lpi.query_presence.return_value = False
 
-            with patch.object(self.runtime, '_init_protocols', new=AsyncMock()):
+            with patch.object(self.runtime, '_init_protocols', new=AsyncMock()), \
+                 patch('src.runtime.PersistenceEngine') as MockPersistence:
+
+                mock_persistence_instance = MockPersistence.return_value
+                mock_persistence_instance.initialize = AsyncMock()
+                mock_persistence_instance._on_decision_event = AsyncMock()
+                mock_persistence_instance.close = AsyncMock()
+
                 await self.runtime.initialize()
 
             decision = {
@@ -88,7 +110,14 @@ class TestLRERuntime(unittest.TestCase):
 
     def test_decision_pipeline_invalid_input(self):
         async def run_test():
-            with patch.object(self.runtime, '_init_protocols', new=AsyncMock()):
+            with patch.object(self.runtime, '_init_protocols', new=AsyncMock()), \
+                 patch('src.runtime.PersistenceEngine') as MockPersistence:
+
+                mock_persistence_instance = MockPersistence.return_value
+                mock_persistence_instance.initialize = AsyncMock()
+                mock_persistence_instance._on_decision_event = AsyncMock()
+                mock_persistence_instance.close = AsyncMock()
+
                 await self.runtime.initialize()
 
             # Missing agent_id
@@ -134,10 +163,21 @@ class TestLRERuntime(unittest.TestCase):
 
     def test_graceful_shutdown(self):
         async def run_test():
-            with patch.object(self.runtime, '_init_protocols', new=AsyncMock()):
+            with patch.object(self.runtime, '_init_protocols', new=AsyncMock()), \
+                 patch('src.runtime.PersistenceEngine') as MockPersistence:
+
+                mock_persistence_instance = MockPersistence.return_value
+                mock_persistence_instance.initialize = AsyncMock()
+                mock_persistence_instance._on_decision_event = AsyncMock()
+                mock_persistence_instance.close = AsyncMock()
+
                 await self.runtime.initialize()
+
             await self.runtime.shutdown()
             self.assertFalse(self.runtime._running)
+
+            # Verify close called
+            self.runtime.persistence.close.assert_called_once()
 
         asyncio.run(run_test())
 
