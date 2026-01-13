@@ -37,6 +37,64 @@ graph TB
     Runtime --> Pipeline
 ```
 
+## LTP: Liminal Transport Protocol
+
+**Status:** ✅ Implemented (PR #6)
+
+### Overview
+LTP provides WebSocket-based communication between external clients and the LRE-Core runtime.
+
+### Protocol Specification
+
+**Endpoint:** `ws://localhost:8000`
+
+**Inbound Message (Command):**
+```json
+{
+  "action": "system_ping",
+  "agent_id": "agent_001",
+  "payload": {
+    // Action-specific data
+  }
+}
+```
+
+**Outbound Message (Result):**
+```json
+{
+  "type": "execution_result",
+  "data": {
+    "status": "executed",
+    "trace_id": "uuid-here",
+    "result": {
+      # Action result
+    },
+    "latency_ms": 123.45
+  }
+}
+```
+
+**Error Response:**
+```json
+{
+  "type": "error",
+  "message": "Error description"
+}
+```
+
+### Current Limitations (v1)
+- Single client at a time
+- No authentication
+- No event streaming (future)
+- No reconnection logic
+
+### Future Enhancements (Declared but Dormant)
+- Multi-client broadcast
+- Event streaming (decision.*, presence.*)
+- Authentication & authorization
+- Rate limiting
+- Circuit breaker for external calls
+
 ## Components
 
 ### 1. Runtime Orchestrator (`LRERuntime`)
