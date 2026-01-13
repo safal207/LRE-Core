@@ -1,5 +1,5 @@
 # lre_dp.py - Liminal Runtime Environment - Decision Protocol
-from typing import Optional, Any
+from typing import Optional, Any, Union
 
 # Interfaces for Type Hinting
 # Since these are integrated via submodules, we assume the environment provides them
@@ -25,7 +25,7 @@ class LRE_DP:
         self.lri = lri
         self.state = {}
 
-    def execute_decision(self, decision_data: dict):
+    def execute_decision(self, decision_data: Union[dict, Any]):
         """
         Executes a decision based on the provided data.
         """
@@ -33,7 +33,24 @@ class LRE_DP:
         # Logic to use LPI and LRI would go here
         # e.g. self.lpi.check_presence(...)
         # e.g. self.lri.update_route(...)
-        self.update_state(decision_data)
+
+        # If it's a context object, we might want to extract data or just pass it
+        # The original code expected a dict for update_state
+        if hasattr(decision_data, "decision_input"):
+             # It's a DecisionContext
+             self.update_state(decision_data.decision_input)
+             return {"status": "executed", "result": "success"}
+        elif isinstance(decision_data, dict):
+            self.update_state(decision_data)
+            return {"status": "executed", "result": "success"}
+        else:
+             # Fallback
+             try:
+                 self.update_state(dict(decision_data))
+                 return {"status": "executed", "result": "success"}
+             except:
+                 print(f"[LRE-DP] Could not update state with {type(decision_data)}")
+                 return {"status": "executed", "warning": "state_not_updated"}
 
     def update_state(self, new_state: dict):
         """

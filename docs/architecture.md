@@ -1,43 +1,94 @@
-# LRE-Core Architecture
+# Core Runtime Architecture
 
-## System Diagram (v2)
+The LRE-Core Runtime architecture is designed around three planes: Control, Data, and Execution. The `LRERuntime` class acts as the central orchestrator, binding these planes together through an asynchronous Event Bus and a structured Decision Pipeline.
 
-This diagram illustrates the interaction between the Decision Markup Language (DML), Liminal Runtime Environment (LRE-DP), Presence (LPI), and Routing (LRI) components.
+## Architecture Diagram
 
 ```mermaid
-flowchart TD
-    %% Define Styles
-    classDef decision fill:#f9f,stroke:#333,stroke-width:2px;
-    classDef execution fill:#ccf,stroke:#333,stroke-width:2px;
-    classDef presence fill:#cfc,stroke:#333,stroke-width:2px;
-    classDef routing fill:#ffc,stroke:#333,stroke-width:2px;
-
-    %% Swimlanes (Subgraphs)
-    subgraph Decision_Execution ["Decision & Execution Layer"]
-        direction TB
-        DML(DML: Decision Markup Language):::decision
-        LRE_DP(LRE-DP: Decision Protocol):::execution
+graph TB
+    subgraph "Control Plane"
+        DML[DML Parser]
+        LRI[LRI Router]
     end
 
-    subgraph Infrastructure ["Infrastructure Layer"]
-        direction TB
-        LPI(LPI: Presence Interface):::presence
-        LRI(LRI: Routing Interface):::routing
+    subgraph "Data Plane"
+        LTP[LTP Transport]
+        LPI[LPI Presence]
     end
 
-    %% Interactions
-    DML -- "1. Propose Action" --> LRE_DP
-    LRE_DP -- "2. Execute Decision" --> DML
+    subgraph "Execution Plane"
+        LREDP[LRE-DP Executor]
+    end
 
-    LPI -- "3. Query Presence" --> LRE_DP
-    DML -. "Check Status" .-> LPI
+    subgraph "Runtime Core"
+        Runtime[LRERuntime]
+        EventBus[Event Bus]
+        Pipeline[Decision Pipeline]
+    end
 
-    LRI -- "4. Update Route" --> DML
-
-    %% Path Styling (Colored Paths)
-    linkStyle 0 stroke:#f0f,stroke-width:2px;
-    linkStyle 1 stroke:#00f,stroke-width:2px;
-    linkStyle 2 stroke:#0f0,stroke-width:2px;
-    linkStyle 3 stroke:#999,stroke-width:2px,stroke-dasharray: 5 5;
-    linkStyle 4 stroke:#eb0,stroke-width:2px;
+    DML --> Pipeline
+    Pipeline --> LPI
+    Pipeline --> LRI
+    Pipeline --> LREDP
+    EventBus -.-> LPI
+    EventBus -.-> LRI
+    EventBus -.-> LREDP
+    Runtime --> EventBus
+    Runtime --> Pipeline
 ```
+
+## Components
+
+### 1. Runtime Orchestrator (`LRERuntime`)
+The entry point of the system. It is responsible for:
+- Initializing the environment and submodules.
+- Dependency injection for protocols (LPI, LRI, DML, LRE-DP).
+- Managing the lifecycle of the application (startup, loop, shutdown).
+- Handling top-level error boundaries.
+
+### 2. Decision Pipeline (`DecisionPipeline`)
+The critical path for decision processing. It executes a 6-step flow:
+1.  **Parse**: Validates the input `dml_input`.
+2.  **Context**: Wraps the execution in a `DecisionContext` for tracing and timing.
+3.  **Presence Check (LPI)**: Verifies if the target agent is online via LPI. If offline, the decision is deferred.
+4.  **Routing (LRI)**: Calculates the route for the action via LRI.
+5.  **Execute (LRE-DP)**: Delegates the actual execution to the LRE-DP component.
+6.  **Result Handling**: Aggregates the result, latency, and errors into a standardized response.
+
+### 3. Async Event Bus (`EventBus`)
+A lightweight, in-memory pub/sub system enabling decoupled communication between components.
+Supported topics include:
+- `decision.received`
+- `decision.validated`
+- `decision.executing`
+- `decision.completed`
+- `decision.failed`
+- `presence.changed`
+- `route.updated`
+
+Wildcard subscriptions (e.g., `decision.*`) are supported.
+
+## Integration Patterns
+
+The runtime uses dependency injection to integrate the protocols. Submodules (`src/lpi`, `src/lri`, etc.) are dynamically added to `sys.path` to ensure importability.
+
+- **LPI (Presence)**: Used to query agent status.
+- **LRI (Routing)**: Used to determine decision routing.
+- **LRE-DP (Execution)**: Used to execute the business logic of the decision.
+- **DML (Logic)**: (Future) Used to parse and validate decision markup.
+
+## API Reference
+
+### `LRERuntime`
+- `initialize()`: Async setup.
+- `process_decision(dml_input: dict) -> dict`: Process a single decision.
+- `shutdown()`: Graceful cleanup.
+
+### `DecisionContext`
+- `get_trace_id()`: Returns the unique trace ID.
+- `add_metadata(key, value)`: Adds debug info.
+- `get_summary()`: Returns the execution summary.
+
+### `EventBus`
+- `publish(topic, data)`: Emit an event.
+- `subscribe(topic, handler)`: Listen for events.
