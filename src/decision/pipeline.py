@@ -79,8 +79,17 @@ class DecisionPipeline:
                     if asyncio.iscoroutine(res):
                         res = await res
 
-                    ctx.set_result(res if res else {"status": "executed"})
-                    await self.event_bus.publish("decision.completed", ctx.get_summary())
+                    final_status = res.get("status", "executed") if res else "executed"
+                    ctx.set_result(res if res else {"status": "executed"}, status=final_status)
+
+                    if final_status == "failed":
+                        await self.event_bus.publish("decision.failed", ctx.get_summary())
+                    elif final_status == "rejected":
+                        await self.event_bus.publish("decision.rejected", ctx.get_summary())
+                    elif final_status == "deferred":
+                        await self.event_bus.publish("decision.deferred", ctx.get_summary())
+                    else:
+                        await self.event_bus.publish("decision.completed", ctx.get_summary())
 
                 except Exception as e:
                     logger.error(f"Error executing decision: {e}")

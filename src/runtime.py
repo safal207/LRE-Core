@@ -8,6 +8,7 @@ from typing import Optional, Dict, Any
 from src.event_bus import EventBus
 from src.decision.pipeline import DecisionPipeline
 from src.execution.registry import ActionRegistry, set_default_registry
+from src.persistence.engine import PersistenceEngine
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +21,7 @@ class LRERuntime:
         self.config = config or {}
         self.event_bus = EventBus()
         self.registry = ActionRegistry()  # ← NEW
+        self.persistence = None
         self.lpi = None
         self.lri = None
         self.dml = None
@@ -61,6 +63,19 @@ class LRERuntime:
 
         # Initialize Pipeline
         self.pipeline = DecisionPipeline(self.lpi, self.lri, self.lre_dp, self.event_bus)
+
+        # NEW: Initialize Persistence
+        db_path = self.config.get("db_path", "./data/lre_core.db")
+        self.persistence = PersistenceEngine(db_path)
+        await self.persistence.initialize()
+
+        # Subscribe persistence to decision events
+        await self.event_bus.subscribe("decision.completed", self.persistence._on_decision_event)
+        await self.event_bus.subscribe("decision.failed", self.persistence._on_decision_event)
+        await self.event_bus.subscribe("decision.rejected", self.persistence._on_decision_event)
+        await self.event_bus.subscribe("decision.deferred", self.persistence._on_decision_event)
+
+        logger.info("Persistence engine connected to Event Bus")
 
         # Wire up Event Bus (Internal subscriptions if any)
         # For now, just logging or basic stuff could be added
@@ -160,5 +175,10 @@ class LRERuntime:
         """
         logger.info("Shutting down LRERuntime...")
         self._running = False
+
+        # Close persistence before other components
+        if self.persistence:
+            await self.persistence.close()
+
         # Cleanup tasks if any
         logger.info("Shutdown complete")
