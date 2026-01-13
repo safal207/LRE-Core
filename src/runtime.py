@@ -7,6 +7,7 @@ from typing import Optional, Dict, Any
 
 from src.event_bus import EventBus
 from src.decision.pipeline import DecisionPipeline
+from src.execution.registry import ActionRegistry, set_default_registry
 
 logger = logging.getLogger(__name__)
 
@@ -18,6 +19,7 @@ class LRERuntime:
     def __init__(self, config: Optional[dict] = None):
         self.config = config or {}
         self.event_bus = EventBus()
+        self.registry = ActionRegistry()  # ← NEW
         self.lpi = None
         self.lri = None
         self.dml = None
@@ -48,6 +50,11 @@ class LRERuntime:
             if s_p not in sys.path:
                 sys.path.insert(0, s_p)
                 logger.debug(f"Added {s_p} to sys.path")
+
+        # NEW: Set default registry and load stdlib
+        set_default_registry(self.registry)
+        import src.execution.stdlib  # Importing triggers @action decorators
+        logger.info(f"Loaded {len(self.registry.list_actions())} standard actions")
 
         # Import and instantiate protocol handlers
         await self._init_protocols()
@@ -104,8 +111,8 @@ class LRERuntime:
         # LRE-DP
         try:
             from src.lre_dp import LRE_DP
-            # LRE-DP needs LPI and LRI
-            self.lre_dp = LRE_DP(self.lpi, self.lri)
+            # LRE-DP needs LPI, LRI and Registry
+            self.lre_dp = LRE_DP(self.lpi, self.lri, self.registry)
             logger.info("Loaded LRE-DP protocol")
         except ImportError as e:
             logger.warning(f"Failed to import LRE_DP: {e}. Using Mock.")

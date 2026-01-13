@@ -1,60 +1,75 @@
-# lre_dp.py - Liminal Runtime Environment - Decision Protocol
-from typing import Optional, Any, Union
+from typing import Optional, Any, Union, Dict
+from src.execution.registry import ActionRegistry
+import logging
 
-# Interfaces for Type Hinting
-# Since these are integrated via submodules, we assume the environment provides them
-# or they are passed in. We define Protocols/Interfaces here if we want strict typing
-# without depending on the implementations, but for this integration we follow the instruction.
+logger = logging.getLogger(__name__)
 
 class LRE_DP:
     """
     Liminal Runtime Environment - Decision Protocol
     Executes decisions based on inputs via LPI + LRI.
     """
-    def __init__(self, lpi: Any, lri: Any):
-        """
-        Initialize LRE-DP with its dependencies.
-
-        Args:
-            lpi: Liminal Presence Interface (LPI) handler.
-                 Expected to provide presence information.
-            lri: Living Relational Identity (LRI) handler.
-                 Expected to provide routing and context updates.
-        """
+    def __init__(self, lpi: Any, lri: Any, registry: ActionRegistry):
         self.lpi = lpi
         self.lri = lri
+        self.registry = registry  # ← NEW
         self.state = {}
 
-    def execute_decision(self, decision_data: Union[dict, Any]):
+    async def execute_decision(self, decision_data: Union[dict, Any]) -> Dict[str, Any]:
         """
-        Executes a decision based on the provided data.
+        Execute decision using registered action handlers.
         """
-        print(f"[LRE-DP] Executing decision: {decision_data}")
-        # Logic to use LPI and LRI would go here
-        # e.g. self.lpi.check_presence(...)
-        # e.g. self.lri.update_route(...)
-
-        # If it's a context object, we might want to extract data or just pass it
-        # The original code expected a dict for update_state
+        # Extract decision context
         if hasattr(decision_data, "decision_input"):
-             # It's a DecisionContext
-             self.update_state(decision_data.decision_input)
-             return {"status": "executed", "result": "success"}
+            context = decision_data
+            decision_dict = decision_data.decision_input
         elif isinstance(decision_data, dict):
-            self.update_state(decision_data)
-            return {"status": "executed", "result": "success"}
+            # For backward compatibility, wrap dict in context
+            from src.decision.context import DecisionContext
+            context = DecisionContext(decision_data)
+            decision_dict = decision_data
         else:
-             # Fallback
-             try:
-                 self.update_state(dict(decision_data))
-                 return {"status": "executed", "result": "success"}
-             except:
-                 print(f"[LRE-DP] Could not update state with {type(decision_data)}")
-                 return {"status": "executed", "warning": "state_not_updated"}
+            return {"status": "rejected", "error": "Invalid decision data type"}
+
+        action_name = decision_dict.get("action")
+
+        if not action_name:
+            return {"status": "rejected", "reason": "Missing 'action' field"}
+
+        # Lookup handler in registry
+        handler = self.registry.get_handler(action_name)
+
+        if not handler:
+            logger.warning(f"Unknown action: {action_name}")
+            return {
+                "status": "rejected",
+                "reason": f"Unknown action: {action_name}",
+                "available_actions": self.registry.list_actions()
+            }
+
+        # Execute handler with error handling
+        try:
+            result = await handler(context)
+
+            # Update state for backward compatibility
+            self.update_state(decision_dict)
+
+            return {
+                "status": "executed",
+                "result": result
+            }
+        except Exception as e:
+            logger.error(f"Action '{action_name}' failed: {e}", exc_info=True)
+            return {
+                "status": "failed",
+                "action": action_name,
+                "error": str(e),
+                "error_type": type(e).__name__
+            }
 
     def update_state(self, new_state: dict):
         """
         Updates the internal state.
         """
-        print(f"[LRE-DP] Updating state with: {new_state}")
+        # print(f"[LRE-DP] Updating state with: {new_state}")
         self.state.update(new_state)
