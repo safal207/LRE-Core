@@ -13,13 +13,15 @@ import asyncio
 import websockets
 import logging
 import sys
+import json
 from pathlib import Path
 
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from src.runtime import LRERuntime
-from src.ltp.handler import handle_client
+from src.transport.handler import handle_client
+from src.core.events import Events
 
 # Configure logging
 logging.basicConfig(
@@ -59,8 +61,23 @@ async def main():
         print("="*70)
 
         print("\nExample commands to send via WebSocket:")
-        print('  {"action": "system_ping", "agent_id": "agent_001", "payload": {}}')
-        print('  {"action": "echo_payload", "agent_id": "agent_001", "payload": {"test": "data"}}')
+
+        example_ping = {
+            "trace_id": "demo-1",
+            "type": Events.SYSTEM_PING,
+            "timestamp": "2025-01-14T10:30:00.000Z",
+            "payload": {}
+        }
+
+        example_echo = {
+            "trace_id": "demo-2",
+            "type": Events.ECHO_PAYLOAD,
+            "timestamp": "2025-01-14T10:30:00.000Z",
+            "payload": {"test": "data"}
+        }
+
+        print(f"  {json.dumps(example_ping)}")
+        print(f"  {json.dumps(example_echo)}")
 
         print("\nPress Ctrl+C to stop the server\n")
 

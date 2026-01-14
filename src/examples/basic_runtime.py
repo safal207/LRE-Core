@@ -5,6 +5,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 from src.runtime import LRERuntime
+from src.core.events import Events
 
 logging.basicConfig(level=logging.INFO, format='[%(levelname)s] %(message)s')
 
@@ -23,9 +24,9 @@ async def main():
     print("\n📝 Executing actions...")
 
     actions = [
-        {"action": "system_ping", "agent_id": agent_id, "payload": {}},
-        {"action": "echo_payload", "agent_id": agent_id, "payload": {"test": "data"}},
-        {"action": "log_message", "agent_id": agent_id, "payload": {"message": "Test log", "level": "info"}},
+        {"action": Events.SYSTEM_PING, "agent_id": agent_id, "payload": {}},
+        {"action": Events.ECHO_PAYLOAD, "agent_id": agent_id, "payload": {"test": "data"}},
+        {"action": Events.LOG_MESSAGE, "agent_id": agent_id, "payload": {"message": "Test log", "level": "info"}},
         {"action": "nonexistent_action", "agent_id": agent_id, "payload": {}},  # This will be rejected
     ]
 

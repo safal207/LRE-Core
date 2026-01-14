@@ -17,6 +17,10 @@ import json
 import sys
 from pathlib import Path
 
+# Add src to path to import Events
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+from src.core.events import Events
+
 async def test_client():
     uri = "ws://localhost:8000"
 
@@ -36,8 +40,9 @@ async def test_client():
             print("="*70)
 
             command = {
-                "action": "system_ping",
-                "agent_id": "test_agent",
+                "trace_id": "test-1",
+                "type": Events.SYSTEM_PING,
+                "timestamp": "2025-01-14T12:00:00Z",
                 "payload": {}
             }
 
@@ -55,8 +60,9 @@ async def test_client():
             print("="*70)
 
             command = {
-                "action": "echo_payload",
-                "agent_id": "test_agent",
+                "trace_id": "test-2",
+                "type": Events.ECHO_PAYLOAD,
+                "timestamp": "2025-01-14T12:00:01Z",
                 "payload": {
                     "message": "Hello from WebSocket client!",
                     "timestamp": 1234567890,
@@ -78,8 +84,9 @@ async def test_client():
             print("="*70)
 
             command = {
-                "action": "nonexistent_action",
-                "agent_id": "test_agent",
+                "trace_id": "test-3",
+                "type": "nonexistent_action",
+                "timestamp": "2025-01-14T12:00:02Z",
                 "payload": {}
             }
 
@@ -93,13 +100,14 @@ async def test_client():
 
             # Test 4: Invalid JSON (error handling)
             print("="*70)
-            print("Test 4: Invalid Command (Missing 'action')")
+            print("Test 4: Invalid Command (Missing 'type')")
             print("="*70)
 
             command = {
-                "agent_id": "test_agent",
+                "trace_id": "test-4",
+                "timestamp": "2025-01-14T12:00:03Z",
                 "payload": {}
-                # Missing 'action' field
+                # Missing 'type' field
             }
 
             print(f"📤 Sending: {json.dumps(command, indent=2)}")
