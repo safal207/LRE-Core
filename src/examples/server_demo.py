@@ -20,6 +20,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from src.runtime import LRERuntime
 from src.ltp.handler import handle_client
+from src.core.events import Events
 
 # Configure logging
 logging.basicConfig(
@@ -59,8 +60,8 @@ async def main():
         print("="*70)
 
         print("\nExample commands to send via WebSocket:")
-        print('  {"action": "system_ping", "agent_id": "agent_001", "payload": {}}')
-        print('  {"action": "echo_payload", "agent_id": "agent_001", "payload": {"test": "data"}}')
+        print(f'  {{"type": "{Events.SYSTEM_PING}", "trace_id": "test-1", "timestamp": "...", "payload": {{}}}}')
+        print(f'  {{"type": "{Events.ECHO_PAYLOAD}", "trace_id": "test-2", "timestamp": "...", "payload": {{"test": "data"}}}}')
 
         print("\nPress Ctrl+C to stop the server\n")
 

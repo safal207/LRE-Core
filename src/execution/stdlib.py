@@ -4,12 +4,13 @@ import uuid
 import logging
 from src.decision.context import DecisionContext
 from src.execution.registry import action
+from src.core.events import Events
 
 logger = logging.getLogger(__name__)
 
 # Note: These use the default registry via @action decorator
 
-@action("system_ping")
+@action(Events.SYSTEM_PING)
 async def system_ping(context: DecisionContext) -> dict:
     """Health check action - returns pong with timestamp."""
     return {
@@ -19,7 +20,7 @@ async def system_ping(context: DecisionContext) -> dict:
         "agent_id": context.decision_input.get("agent_id")
     }
 
-@action("echo_payload")
+@action(Events.ECHO_PAYLOAD)
 async def echo_payload(context: DecisionContext) -> dict:
     """Debug action - echoes back the input payload."""
     return {
@@ -63,7 +64,7 @@ async def mock_deploy(context: DecisionContext) -> dict:
         "duration": duration
     }
 
-@action("emergency_shutdown")
+@action(Events.EMERGENCY_SHUTDOWN)
 async def emergency_shutdown(context: DecisionContext) -> dict:
     """Initiates emergency shutdown (immediate or graceful)."""
     payload = context.decision_input.get("payload", {})
