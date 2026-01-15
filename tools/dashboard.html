@@ -327,7 +327,7 @@
         let ws = null;
         let isConnected = false;
         let eventCount = 0;
-        let pendingRequests = new Map(); // timestamp -> action name (for latency tracking)
+        let lastPingTime = null;
 
         // --- DOM Elements ---
         const statusDot = document.getElementById('status-dot');
@@ -393,15 +393,18 @@
                 return;
             }
 
-            // Generate trace_id
-            const trace_id = 'trace-' + Date.now() + '-' + Math.floor(Math.random() * 10000);
+            const trace_id = crypto.randomUUID(); // Strict UUID v4 compliance
+
+            if (action === 'system_ping') {
+                lastPingTime = performance.now(); // More accurate timing
+            }
 
             // Add agent_id to payload for backward compatibility/logging
             payload.agent_id = AGENT_ID;
 
             const command = {
-                trace_id: trace_id,
                 type: action,
+                trace_id: trace_id,
                 timestamp: new Date().toISOString(),
                 payload: payload
             };
@@ -409,35 +412,33 @@
             try {
                 const jsonStr = JSON.stringify(command);
                 ws.send(jsonStr);
-
-                const timestamp = Date.now();
-                pendingRequests.set(timestamp, action);
-
                 addLog('SENT', action, payload);
-                return timestamp;
             } catch (e) {
                 addLog('ERROR', 'Failed to send command: ' + e.message);
             }
         }
 
         function handleResponse(data) {
-            // Check for pong
-            if (data.type === 'system_pong' || data.message === 'pong') {
-                const now = Date.now();
-                // Simple latency tracking
+            // 1. Latency Calculation (LTP Spec only)
+            if (data.type === 'system_pong' && lastPingTime) {
+                const latency = Math.round(performance.now() - lastPingTime);
+                latencyValue.innerText = `${latency}`;
+                lastPingTime = null;
             }
 
-            if (data.type === 'execution_result' || data.type === 'echo_payload' || data.type === 'system_pong' || data.status === 'success') {
-                addLog('RECV', data.type || 'Response', data);
-            } else if (data.type === 'error') {
-                addLog('ERROR', data.payload?.message || data.message || 'Unknown error', data);
+            // 2. Error Handling (strict payload.code)
+            if (data.type === 'error') {
+                const code = data.payload?.code || 'E999';
+                const msg = data.payload?.message || 'Unknown Error';
+                addLog('ERROR', `[${code}] ${msg}`, data.payload?.details || data);
+                return;
+            }
+
+            // 3. Log Success
+            if (['system_pong', 'echo_payload', 'execution_result'].includes(data.type)) {
+                addLog('RECV', data.type, data.payload || data);
             } else {
                 addLog('RECV', 'Message', data);
-            }
-
-            if (data.type === 'system_pong' || data.message === 'pong') {
-                // Update latency UI
-                // relying on lastPingTime tracked globally
             }
         }
 
@@ -501,11 +502,7 @@
 
         // --- Button Handlers ---
 
-        // Track ping start time for latency calculation
-        let lastPingTime = 0;
-
         function sendPing() {
-            lastPingTime = Date.now();
             sendCommand('system_ping');
         }
 
@@ -550,21 +547,6 @@
             }
         }
 
-        // --- Latency tracking override ---
-        // We hijack the send/recv to update the latency UI
-        const originalHandleResponse = handleResponse;
-        handleResponse = function(data) {
-            const now = Date.now();
-
-            // If it's a ping response (pong)
-            if (data.message === 'pong' && lastPingTime > 0) {
-                const latency = now - lastPingTime;
-                latencyValue.innerText = latency;
-                lastPingTime = 0; // reset
-            }
-
-            originalHandleResponse(data);
-        };
 
         // Initialize
         window.addEventListener('DOMContentLoaded', connect);
