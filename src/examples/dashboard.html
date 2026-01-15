@@ -393,9 +393,16 @@
                 return;
             }
 
+            // Generate trace_id
+            const trace_id = 'trace-' + Date.now() + '-' + Math.floor(Math.random() * 10000);
+
+            // Add agent_id to payload for backward compatibility/logging
+            payload.agent_id = AGENT_ID;
+
             const command = {
-                action: action,
-                agent_id: AGENT_ID,
+                trace_id: trace_id,
+                type: action,
+                timestamp: new Date().toISOString(),
                 payload: payload
             };
 
@@ -404,10 +411,7 @@
                 ws.send(jsonStr);
 
                 const timestamp = Date.now();
-                pendingRequests.set(timestamp, action); // Track for latency if needed, or rely on response timestamps
-
-                // For 'system_ping', we'll rely on our own tracking if response doesn't have it
-                // But server usually echoes back useful info.
+                pendingRequests.set(timestamp, action);
 
                 addLog('SENT', action, payload);
                 return timestamp;
@@ -417,64 +421,23 @@
         }
 
         function handleResponse(data) {
-            // Calculate simplistic latency if possible
-            // In a real app we'd match request IDs. Here we estimate based on recent activity or payload
-
             // Check for pong
-            if (data.message === 'pong') {
+            if (data.type === 'system_pong' || data.message === 'pong') {
                 const now = Date.now();
-                // If payload has timestamp from server, we can use that if clocks are synced,
-                // but better to just use RTT if we tracked it.
-                // For simplicity as requested:
-                if (data.timestamp) {
-                    // This is server time.
-                }
+                // Simple latency tracking
             }
 
-            // Just displaying latency for pongs/results if available or just update based on last action?
-            // The requirement says "Latency calculated from ping/pong"
-            // If the response is a result of a ping, we can calculate RTT.
-            // Since we don't have request IDs in this simple protocol, let's just
-            // assume the last request matches this response if we want strict latency,
-            // or just use the ping/pong mechanism.
-
-            // Actually, for the Status Bar latency, we should probably send periodic pings or
-            // update it when we receive a pong.
-
-            if (data.type === 'execution_result' || data.status === 'success') {
-                addLog('RECV', 'Response', data);
+            if (data.type === 'execution_result' || data.type === 'echo_payload' || data.type === 'system_pong' || data.status === 'success') {
+                addLog('RECV', data.type || 'Response', data);
             } else if (data.type === 'error') {
-                addLog('ERROR', data.message || 'Unknown error', data);
+                addLog('ERROR', data.payload?.message || data.message || 'Unknown error', data);
             } else {
                 addLog('RECV', 'Message', data);
             }
 
-            // Special handling for ping response (runtime returns direct dict, not wrapped in type=execution_result sometimes?)
-            // Based on stdlib: system_ping returns { "status": "success", "message": "pong", ... }
-            // Runtime wraps it?
-            // Looking at server_demo.py/test_client.py output:
-            // Received: { "status": "success", "message": "pong", ... }
-            // It seems it returns the result directly if it's not an error?
-            // Or `handle_client` logic:
-            // result = await runtime.execute_decision(...)
-            // response = result['result']
-            // await ws.send(json.dumps(response))
-
-            // So if action is system_ping, response is the dict from system_ping.
-            if (data.message === 'pong') {
-                // Calculate latency based on last ping?
-                // Since we don't have ID, let's assume it correlates to the last ping we sent.
-                // Or better, for the 'Latency: 23ms' display, we could insert a client-side timestamp in payload
-                // but system_ping doesn't return payload.
-                // We'll approximate or use server processing time if provided.
-
-                // Let's implement a "background ping" for the status bar if we wanted to be fancy,
-                // but for now let's just update latency when we do a manual ping or echo.
-
-                // If we want to show latency for *this* message:
-                // We can't easily without a request ID.
-                // However, the requirement says "Latency calculated from ping/pong".
-                // Let's cheat a bit and say if we just sent a ping, this is the response.
+            if (data.type === 'system_pong' || data.message === 'pong') {
+                // Update latency UI
+                // relying on lastPingTime tracked globally
             }
         }
 
