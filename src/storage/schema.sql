@@ -40,3 +40,10 @@ FROM events
 WHERE type = 'system_ping'
   AND json_extract(payload, '$.agent_id') IS NOT NULL
 GROUP BY json_extract(payload, '$.agent_id');
+
+-- Table for StateManager
+CREATE TABLE IF NOT EXISTS process_state (
+    trace_id TEXT PRIMARY KEY,
+    state_data TEXT NOT NULL, -- JSON blob
+    updated_at TEXT NOT NULL  -- ISO 8601 format
+);

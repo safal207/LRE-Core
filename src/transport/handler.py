@@ -5,13 +5,13 @@ from datetime import datetime
 import re
 from typing import Optional, Tuple
 
-from src.storage.db import get_db
+from src.storage.sqlite_backend import SQLiteBackend
 import websockets
 from src.core.events import Events
 
 logger = logging.getLogger(__name__)
 
-db = get_db()
+db = SQLiteBackend()
 
 
 def validate_message(msg: dict) -> tuple[bool, str | None]:
