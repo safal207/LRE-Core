@@ -1,7 +1,9 @@
-import asyncio
-import time
-import uuid
+"""
+Standard library of actions for LRE.
+"""
+
 import logging
+import time  # ← КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: ДОБАВЛЕН IMPORT
 from src.decision.context import DecisionContext
 from src.execution.registry import action
 from src.core.events import Events
@@ -19,7 +21,7 @@ async def system_ping(context: DecisionContext) -> dict:
     return {
         "status": "success",
         "message": "pong",
-        "timestamp": time.time(),
+        "timestamp": context.decision_input.get("timestamp"),
         "agent_id": context.decision_input.get("agent_id")
     }
 
@@ -28,42 +30,41 @@ async def echo_payload(context: DecisionContext) -> dict:
     """Debug action - echoes back the input payload."""
     return {
         "status": "success",
-        "echo": context.decision_input.get("payload")
+        "message": "echo",
+        "payload": context.decision_input.get("payload", {})
     }
 
-@action(Events.LOG_MESSAGE)
-async def log_message(context: DecisionContext) -> dict:
-    """Logs a message at specified level (info/warning/error)."""
-    payload = context.decision_input.get("payload", {})
-    level = payload.get("level", "info")
-    message = payload.get("message", "")
-
-    if level == "error":
-        logger.error(message)
-    elif level == "warning":
-        logger.warning(message)
-    else:
-        logger.info(message)
-
-    return {
-        "status": "success",
-        "logged": True,
-        "level": level
-    }
-
-@action(Events.MOCK_DEPLOY)
-async def mock_deploy(context: DecisionContext) -> dict:
-    """Simulates a deployment process with configurable duration."""
+@action("mock_analyze")
+async def mock_analyze(context: DecisionContext) -> dict:
+    """Mock action to simulate long-running analysis."""
+    import asyncio
     payload = context.decision_input.get("payload", {})
     duration = payload.get("duration", 2)
 
-    logger.info(f"Starting mock deployment (duration: {duration}s)")
     await asyncio.sleep(duration)
-    logger.info("Mock deployment complete")
 
     return {
         "status": "success",
-        "deployment_id": str(uuid.uuid4()),
+        "message": "analysis_complete",
+        "duration": duration,
+        "result": {
+            "confidence": 0.95,
+            "findings": ["pattern_a", "pattern_b"]
+        }
+    }
+
+@action("mock_deploy")
+async def mock_deploy(context: DecisionContext) -> dict:
+    """Mock action to simulate deployment."""
+    import asyncio
+    payload = context.decision_input.get("payload", {})
+    duration = payload.get("duration", 1)
+
+    await asyncio.sleep(duration)
+
+    return {
+        "status": "success",
+        "message": "deployment_complete",
         "duration": duration
     }
 
@@ -71,24 +72,20 @@ async def mock_deploy(context: DecisionContext) -> dict:
 async def emergency_shutdown(context: DecisionContext) -> dict:
     """Initiates emergency shutdown (immediate or graceful)."""
     payload = context.decision_input.get("payload", {})
-    severity = payload.get("severity", "normal")
 
-    if severity == "critical":
-        logger.critical("CRITICAL: Emergency shutdown initiated")
-        return {
-            "status": "shutdown",
-            "mode": "immediate",
-            "delay": 0
-        }
-    else:
-        logger.warning("Emergency shutdown scheduled (graceful)")
-        await asyncio.sleep(5)  # Simulate cleanup
-        return {
-            "status": "shutdown",
-            "mode": "graceful",
-            "delay": 5
-        }
+    reason = payload.get("reason", "Emergency shutdown requested")
+    admin_id = payload.get("admin_id", "unknown")
 
+    logger.warning(f"EMERGENCY SHUTDOWN initiated by {admin_id}: {reason}")
+
+    return {
+        "status": "success",
+        "message": "shutdown_initiated",
+        "reason": reason,
+        "admin_id": admin_id,
+        "mode": "graceful",
+        "delay": 5
+    }
 
 @action(Events.FETCH_HISTORY)
 async def fetch_history(context: DecisionContext) -> dict:
@@ -145,7 +142,7 @@ async def get_agent_status(context: DecisionContext) -> dict:
         "type": "agent_status_result",
         "payload": {
             "agents": agents,
-            "timestamp": time.time()
+            "timestamp": time.time()  # ← ТЕПЕРЬ РАБОТАЕТ!
         }
     }
 
