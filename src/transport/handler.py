@@ -186,15 +186,6 @@ async def handle_ping(websocket, msg: dict, runtime):
         }
     }
 
-    # Log outbound event
-    db.log_event(
-        trace_id=response['trace_id'],
-        event_type=response['type'],
-        direction='OUTBOUND',
-        payload=response.get('payload'),
-        timestamp=response.get('timestamp')
-    )
-
     await websocket.send(json.dumps(response))
 
 async def handle_echo(websocket, msg: dict, runtime):
@@ -207,15 +198,6 @@ async def handle_echo(websocket, msg: dict, runtime):
         "timestamp": datetime.utcnow().isoformat() + "Z",
         "payload": msg.get("payload", {})
     }
-
-    # Log outbound event
-    db.log_event(
-        trace_id=response['trace_id'],
-        event_type=response['type'],
-        direction='OUTBOUND',
-        payload=response.get('payload'),
-        timestamp=response.get('timestamp')
-    )
 
     await websocket.send(json.dumps(response))
 
