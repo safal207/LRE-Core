@@ -1,143 +1,174 @@
-import unittest
-import asyncio
+import pytest
 import tempfile
-import json
-from pathlib import Path
-from src.persistence.engine import PersistenceEngine
-from src.decision.context import DecisionContext
+import os
+from src.storage.db import Database
+from src.core.events import Events
 
-class TestPersistence(unittest.TestCase):
-    def setUp(self):
-        # Use temporary DB for tests
-        self.temp_db = tempfile.NamedTemporaryFile(delete=False, suffix=".db")
-        self.db_path = self.temp_db.name
-        self.temp_db.close()
 
-    def tearDown(self):
-        # Clean up
-        Path(self.db_path).unlink(missing_ok=True)
+@pytest.fixture
+def temp_db():
+    """Create temporary database for testing."""
+    with tempfile.NamedTemporaryFile(delete=False, suffix='.db') as f:
+        db_path = f.name
 
-    def test_persistence_init(self):
-        """Test database initialization."""
-        async def run():
-            engine = PersistenceEngine(self.db_path)
-            await engine.initialize()
+    db = Database(db_path)
+    yield db
 
-            # Check file exists
-            self.assertTrue(Path(self.db_path).exists())
+    # Cleanup
+    os.unlink(db_path)
 
-            await engine.close()
 
-        asyncio.run(run())
+def test_database_initialization(temp_db):
+    """Database should initialize with schema."""
+    stats = temp_db.get_stats()
+    assert stats['total_events'] == 0
+    assert stats['unique_traces'] == 0
 
-    def test_log_decision(self):
-        """Test logging a decision."""
-        async def run():
-            engine = PersistenceEngine(self.db_path)
-            await engine.initialize()
 
-            # Create decision context
-            decision = {"action": "test", "agent_id": "agent_001", "payload": {}}
-            ctx = DecisionContext(decision)
-            async with ctx:
-                 pass
-            ctx.set_result({"status": "success"}, status="executed")
+def test_log_inbound_event(temp_db):
+    """Should log inbound events correctly."""
+    event_id = temp_db.log_event(
+        trace_id='test-trace-123',
+        event_type=Events.SYSTEM_PING,
+        direction='INBOUND',
+        payload={'agent_id': 'agent-001'}
+    )
 
-            # Log it
-            await engine.log_decision(ctx)
+    assert event_id > 0
 
-            # Verify it's in DB
-            history = await engine.get_agent_history("agent_001")
-            self.assertEqual(len(history), 1)
-            self.assertEqual(history[0]["action"], "test")
-            self.assertEqual(history[0]["agent_id"], "agent_001")
+    # Verify it was logged
+    stats = temp_db.get_stats()
+    assert stats['total_events'] == 1
 
-            await engine.close()
 
-        asyncio.run(run())
+def test_log_outbound_event(temp_db):
+    """Should log outbound events correctly."""
+    temp_db.log_event(
+        trace_id='test-trace-123',
+        event_type=Events.SYSTEM_PONG,
+        direction='OUTBOUND',
+        payload={'message': 'pong'}
+    )
 
-    def test_query_filters(self):
-        """Test history queries with filters."""
-        async def run():
-            engine = PersistenceEngine(self.db_path)
-            await engine.initialize()
+    events = temp_db.fetch_history(trace_id='test-trace-123')
+    assert len(events) == 1
+    assert events[0]['type'] == Events.SYSTEM_PONG
+    assert events[0]['direction'] == 'OUTBOUND'
 
-            # Log multiple decisions
-            for i in range(5):
-                decision = {"action": f"action_{i}", "agent_id": "agent_001", "payload": {}}
-                ctx = DecisionContext(decision)
-                async with ctx:
-                    pass
-                status = "executed" if i % 2 == 0 else "failed"
-                ctx.set_result({}, status=status)
-                await engine.log_decision(ctx)
 
-            # Query all
-            all_history = await engine.get_agent_history("agent_001", limit=10)
-            self.assertEqual(len(all_history), 5)
+def test_fetch_history_by_trace_id(temp_db):
+    """Should fetch events filtered by trace_id."""
+    # Log events for two different traces
+    temp_db.log_event('trace-1', Events.SYSTEM_PING, 'INBOUND', {'agent_id': 'A'})
+    temp_db.log_event('trace-1', Events.SYSTEM_PONG, 'OUTBOUND', {})
+    temp_db.log_event('trace-2', Events.ECHO_PAYLOAD, 'INBOUND', {'agent_id': 'B'})
 
-            # Query only executed
-            executed = await engine.get_agent_history("agent_001", status="executed")
-            self.assertEqual(len(executed), 3)
+    # Fetch only trace-1 events
+    events = temp_db.fetch_history(trace_id='trace-1')
+    assert len(events) == 2
+    assert all(e['trace_id'] == 'trace-1' for e in events)
 
-            # Query only failed
-            failed = await engine.get_agent_history("agent_001", status="failed")
-            self.assertEqual(len(failed), 2)
 
-            await engine.close()
+def test_fetch_history_by_agent_id(temp_db):
+    """Should fetch events filtered by agent_id."""
+    temp_db.log_event('t1', Events.SYSTEM_PING, 'INBOUND', {'agent_id': 'agent-A'})
+    temp_db.log_event('t2', Events.SYSTEM_PING, 'INBOUND', {'agent_id': 'agent-B'})
+    temp_db.log_event('t3', Events.SYSTEM_PING, 'INBOUND', {'agent_id': 'agent-A'})
 
-        asyncio.run(run())
+    events = temp_db.fetch_history(agent_id='agent-A')
+    assert len(events) == 2
+    assert all(e['payload']['agent_id'] == 'agent-A' for e in events)
 
-    def test_persistence_across_restarts(self):
-        """Test that data survives runtime restarts."""
-        async def run():
-            # First session
-            engine1 = PersistenceEngine(self.db_path)
-            await engine1.initialize()
 
-            decision = {"action": "test", "agent_id": "agent_001", "payload": {}}
-            ctx = DecisionContext(decision)
-            async with ctx:
-                pass
-            ctx.set_result({}, status="executed")
-            await engine1.log_decision(ctx)
-            await engine1.close()
+def test_fetch_history_with_limit(temp_db):
+    """Should respect limit parameter."""
+    for i in range(10):
+        temp_db.log_event(f'trace-{i}', Events.SYSTEM_PING, 'INBOUND', {})
 
-            # Second session (new engine instance)
-            engine2 = PersistenceEngine(self.db_path)
-            await engine2.initialize()
+    events = temp_db.fetch_history(limit=5)
+    assert len(events) == 5
 
-            history = await engine2.get_agent_history("agent_001")
-            self.assertEqual(len(history), 1)
 
-            await engine2.close()
+def test_get_recent_agents(temp_db):
+    """Should detect active agents."""
+    import time
 
-        asyncio.run(run())
+    # Agent A is active
+    temp_db.log_event('t1', Events.SYSTEM_PING, 'INBOUND', {'agent_id': 'agent-A'})
 
-    def test_error_logging(self):
-        """Test that failed actions log errors."""
-        async def run():
-            engine = PersistenceEngine(self.db_path)
-            await engine.initialize()
+    # Agent B was active 40 seconds ago (simulate with manual timestamp)
+    old_time = time.time() - 40
+    temp_db.log_event('t2', Events.SYSTEM_PING, 'INBOUND', {'agent_id': 'agent-B'})
 
-            decision = {"action": "fail_test", "agent_id": "agent_001", "payload": {}}
-            ctx = DecisionContext(decision)
-            try:
-                async with ctx:
-                    raise ValueError("Something went wrong")
-            except:
-                pass # context handles marking failed
+    # Manually update timestamp for agent-B to be old
+    import sqlite3
+    with sqlite3.connect(temp_db.db_path) as conn:
+        conn.execute(
+            "UPDATE events SET created_at = ? WHERE trace_id = 't2'",
+            (old_time,)
+        )
+        conn.commit()
 
-            await engine.log_decision(ctx)
+    agents = temp_db.get_recent_agents(since_seconds=30)
 
-            history = await engine.get_agent_history("agent_001")
-            self.assertEqual(len(history), 1)
-            self.assertEqual(history[0]["status"], "failed")
-            self.assertIn("Something went wrong", history[0]["error_msg"])
+    # Should have both agents
+    assert len(agents) == 2
 
-            await engine.close()
+    # Agent A should be ONLINE
+    agent_a = next(a for a in agents if a['agent_id'] == 'agent-A')
+    assert agent_a['status'] == 'ONLINE'
 
-        asyncio.run(run())
+    # Agent B should be OFFLINE
+    agent_b = next(a for a in agents if a['agent_id'] == 'agent-B')
+    assert agent_b['status'] == 'OFFLINE'
+
+
+def test_database_stats(temp_db):
+    """Should return correct statistics."""
+    temp_db.log_event('t1', Events.SYSTEM_PING, 'INBOUND', {})
+    temp_db.log_event('t1', Events.SYSTEM_PONG, 'OUTBOUND', {})
+    temp_db.log_event('t2', Events.ECHO_PAYLOAD, 'INBOUND', {})
+
+    stats = temp_db.get_stats()
+
+    assert stats['total_events'] == 3
+    assert stats['unique_traces'] == 2
+    assert Events.SYSTEM_PING in stats['event_types']
+    assert stats['event_types'][Events.SYSTEM_PING] == 1
+
+
+def test_json_payload_serialization(temp_db):
+    """Should correctly serialize/deserialize complex JSON payloads."""
+    complex_payload = {
+        'agent_id': 'test',
+        'nested': {
+            'key': 'value',
+            'array': [1, 2, 3]
+        },
+        'number': 42
+    }
+
+    temp_db.log_event(
+        'test-trace',
+        Events.ECHO_PAYLOAD,
+        'INBOUND',
+        payload=complex_payload
+    )
+
+    events = temp_db.fetch_history(trace_id='test-trace')
+    retrieved_payload = events[0]['payload']
+
+    assert retrieved_payload == complex_payload
+    assert isinstance(retrieved_payload['nested']['array'], list)
+
+
+def test_empty_payload(temp_db):
+    """Should handle events without payload."""
+    temp_db.log_event('test', Events.SYSTEM_PING, 'INBOUND')
+
+    events = temp_db.fetch_history()
+    assert events[0]['payload'] is None
+
 
 if __name__ == '__main__':
-    unittest.main()
+    pytest.main([__file__, '-v'])

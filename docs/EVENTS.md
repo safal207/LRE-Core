@@ -137,6 +137,68 @@ For each event:
 
 ---
 
+## Storage Events
+
+### fetch_history
+
+**Purpose**: Retrieve event log for a session, agent, or event type
+**Direction**: Client → Server
+**Persistence**: Yes (query operation)
+**Response**: `history_result`
+
+**Payload Schema**:
+```json
+{
+  "trace_id": "uuid",      // Optional: filter by session
+  "agent_id": "string",    // Optional: filter by agent
+  "type": "event_type",    // Optional: filter by event type
+  "limit": 100             // Optional: max events (default: 100)
+}
+```
+
+**Example**:
+```json
+{
+  "trace_id": "550e8400-e29b-41d4-a716-446655440000",
+  "type": "fetch_history",
+  "timestamp": "2025-01-15T10:30:00.000Z",
+  "payload": {
+    "agent_id": "agent_001",
+    "limit": 50
+  }
+}
+```
+
+---
+
+### history_result
+
+**Purpose**: Response containing filtered event history
+**Direction**: Server → Client
+**Persistence**: Yes
+**Response**: None
+
+**Payload Schema**:
+```json
+{
+  "events": [
+    {
+      "id": 123,
+      "trace_id": "uuid",
+      "type": "system_ping",
+      "timestamp": "2025-01-15T10:30:00.000Z",
+      "direction": "INBOUND",
+      "payload": {},
+      "created_at": 1705315800.123
+    }
+  ],
+  "count": 1,
+  "filters": {}
+}
+```
+
+---
+
 ## Error Events
 
 ### error
@@ -179,8 +241,9 @@ To add a new event type:
 | System   | 2     |
 | User     | 1     |
 | Control  | 1     |
+| Storage  | 2     |
 | Error    | 1     |
-| **Total**| **5** |
+| **Total**| **7** |
 
 ---
 

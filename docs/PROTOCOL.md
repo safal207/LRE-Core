@@ -32,7 +32,7 @@ Every message MUST conform to this JSON structure:
 - **trace_id**: Must remain constant for entire session lifecycle
 - **type**: Must be registered in `EVENTS.md`
 - **timestamp**: Must be in UTC timezone with millisecond precision
-- **payload**: Max size 1MB (configurable)
+- **payload**: Max size 1MB (configurable via `LTP_MAX_PAYLOAD_SIZE` environment variable)
 
 ## Protocol Guarantees
 

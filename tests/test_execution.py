@@ -68,7 +68,7 @@ class TestStdLib(unittest.IsolatedAsyncioTestCase):
         ctx = DecisionContext({"action": "echo_payload", "agent_id": "test", "payload": {"foo": "bar"}})
         result = await handler(ctx)
 
-        self.assertEqual(result["echo"], {"foo": "bar"})
+        self.assertEqual(result["payload"], {"foo": "bar"})
 
 class TestIntegration(unittest.IsolatedAsyncioTestCase):
     async def test_lre_dp_execution(self):
