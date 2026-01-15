@@ -10,7 +10,7 @@ Usage:
     if message['type'] == Events.SYSTEM_PING:
         handle_ping()
 """
-
+from functools import lru_cache
 from typing import Set
 
 
@@ -47,23 +47,25 @@ class Events:
     ERROR = "error"
 
     @classmethod
+    @lru_cache(maxsize=1)
     def all(cls) -> Set[str]:
         """
-        Returns set of all registered event types.
+        Returns set of all registered event types (cached).
 
         Returns:
-            Set of event type strings
+            Frozen set of event type strings
 
         Example:
             >>> Events.all()
-            {'system_ping', 'system_pong', 'echo_payload', ...}
+            frozenset({'system_ping', 'system_pong', 'echo_payload', ...})
         """
-        return {
+        # Return frozenset to prevent mutation and allow caching
+        return frozenset({
             value for key, value in cls.__dict__.items()
             if not key.startswith('_')
             and isinstance(value, str)
             and key.isupper()
-        }
+        })
 
     @classmethod
     def is_valid(cls, event_type: str) -> bool:

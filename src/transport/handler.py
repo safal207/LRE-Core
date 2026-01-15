@@ -2,6 +2,7 @@ import json
 import logging
 import asyncio
 from datetime import datetime
+import re
 from typing import Optional, Tuple
 
 from src.storage.db import get_db
@@ -12,7 +13,8 @@ logger = logging.getLogger(__name__)
 
 db = get_db()
 
-def validate_message(msg: dict) -> Tuple[bool, Optional[str]]:
+
+def validate_message(msg: dict) -> tuple[bool, str | None]:
     """
     Validates LTP message structure and content.
 
@@ -23,41 +25,57 @@ def validate_message(msg: dict) -> Tuple[bool, Optional[str]]:
         Tuple of (is_valid, error_code)
         - is_valid: True if message is valid
         - error_code: Error code string if invalid, None otherwise
+
+    Error codes:
+        E001: Invalid JSON structure
+        E002: Unknown event type
+        E006: Required field missing
+        E007: Field type mismatch
     """
-    # Check required fields
+    # Type check for msg itself
     if not isinstance(msg, dict):
         return False, "E001"
 
-    # Backward compatibility: if 'action' is present but 'type' is not, map it?
-    # The spec says "Every message MUST conform". So strictly NO.
-    # But for existing clients (dashboard), they might send 'action'.
-    # We should probably support migration.
-    # However, strict validation was requested.
-    # "Add validation layer for protocol compliance".
-
-    if 'type' not in msg:
-        # Check if legacy 'action' exists
-        if 'action' in msg:
-            # Auto-migrate for legacy clients (optional but helpful)
-            msg['type'] = msg['action']
-        else:
+    # Check required fields presence
+    required_fields = ['type', 'trace_id', 'timestamp']
+    for field in required_fields:
+        if field not in msg:
             return False, "E006"
 
-    if 'trace_id' not in msg:
-        # For legacy clients, maybe generate one?
-        if 'agent_id' in msg: # Legacy format often had agent_id
-             msg['trace_id'] = f"legacy-{msg.get('agent_id')}"
-        else:
-             return False, "E006"
+    # Validate field types - type must be string
+    if not isinstance(msg['type'], str):
+        return False, "E007"
 
-    # Timestamp might be missing in legacy
-    if 'timestamp' not in msg:
-        msg['timestamp'] = datetime.utcnow().isoformat() + "Z"
+    # Validate field types - trace_id must be string
+    if not isinstance(msg['trace_id'], str):
+        return False, "E007"
 
-    # Validate event type
+    # Validate field types - timestamp must be string
+    if not isinstance(msg['timestamp'], str):
+        return False, "E007"
+
+    # Validate trace_id format (basic check)
+    # Should be at least 8 characters (minimal UUID representation)
+    if len(msg['trace_id'].strip()) < 8:
+        return False, "E007"
+
+    # Validate trace_id contains alphanumeric and hyphens only
+    if not re.match(r'^[a-zA-Z0-9\-]+$', msg['trace_id']):
+        return False, "E007"
+
+    # Validate event type is registered
     if not Events.is_valid(msg['type']):
         return False, "E002"
 
+    # Validate payload type if present
+    if 'payload' in msg:
+        if not isinstance(msg['payload'], dict):
+            return False, "E007"
+
+    # Validate meta type if present
+    if 'meta' in msg:
+        if not isinstance(msg['meta'], dict):
+            return False, "E007"
     return True, None
 
 async def send_error(websocket, trace_id: str, error_code: str):
