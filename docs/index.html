@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-<!-- Liminal Runtime Dashboard v1.0 (Local) -->
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -278,27 +277,6 @@
             <div class="tagline">AI Governance Layer • Presence-Aware Decisions</div>
         </header>
 
-<div class="info-banner" style="
-    background-color: rgba(100, 255, 218, 0.1);
-    border: 1px solid var(--liminal-glow);
-    border-radius: var(--radius-card);
-    padding: var(--spacing-md);
-    margin-bottom: var(--spacing-lg);
-    font-size: 0.9rem;
-">
-    <strong>ℹ️ Getting Started:</strong>
-    <ol style="margin: 0.5rem 0 0 1.5rem; padding: 0;">
-        <li>Clone the repo: <code style="background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 4px;">git clone https://github.com/safal207/LRE-Core.git</code></li>
-        <li>Install deps: <code style="background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 4px;">pip install -r requirements.txt</code></li>
-        <li>Start server: <code style="background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 4px;">python src/examples/server_demo.py</code></li>
-        <li>Dashboard will auto-connect to <code style="background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 4px;">ws://localhost:8000</code></li>
-    </ol>
-    <p style="margin: 0.5rem 0 0 0; color: var(--liminal-mist-dim);">
-        💡 <strong>No server running?</strong> The dashboard will show "Disconnected" status. Start the server to activate.
-    </p>
-</div>
-
-
         <!-- Status Bar -->
         <div class="status-bar">
             <div class="status-indicator">
@@ -349,7 +327,7 @@
         let ws = null;
         let isConnected = false;
         let eventCount = 0;
-        let pendingRequests = new Map(); // timestamp -> action name (for latency tracking)
+        let lastPingTime = null;
 
         // --- DOM Elements ---
         const statusDot = document.getElementById('status-dot');
@@ -415,88 +393,52 @@
                 return;
             }
 
+            const trace_id = crypto.randomUUID(); // Strict UUID v4 compliance
+
+            if (action === 'system_ping') {
+                lastPingTime = performance.now(); // More accurate timing
+            }
+
+            // Add agent_id to payload for backward compatibility/logging
+            payload.agent_id = AGENT_ID;
+
             const command = {
-                action: action,
-                agent_id: AGENT_ID,
+                type: action,
+                trace_id: trace_id,
+                timestamp: new Date().toISOString(),
                 payload: payload
             };
 
             try {
                 const jsonStr = JSON.stringify(command);
                 ws.send(jsonStr);
-
-                const timestamp = Date.now();
-                pendingRequests.set(timestamp, action); // Track for latency if needed, or rely on response timestamps
-
-                // For 'system_ping', we'll rely on our own tracking if response doesn't have it
-                // But server usually echoes back useful info.
-
                 addLog('SENT', action, payload);
-                return timestamp;
             } catch (e) {
                 addLog('ERROR', 'Failed to send command: ' + e.message);
             }
         }
 
         function handleResponse(data) {
-            // Calculate simplistic latency if possible
-            // In a real app we'd match request IDs. Here we estimate based on recent activity or payload
-
-            // Check for pong
-            if (data.message === 'pong') {
-                const now = Date.now();
-                // If payload has timestamp from server, we can use that if clocks are synced,
-                // but better to just use RTT if we tracked it.
-                // For simplicity as requested:
-                if (data.timestamp) {
-                    // This is server time.
-                }
+            // 1. Latency Calculation (LTP Spec only)
+            if (data.type === 'system_pong' && lastPingTime) {
+                const latency = Math.round(performance.now() - lastPingTime);
+                latencyValue.innerText = `${latency}`;
+                lastPingTime = null;
             }
 
-            // Just displaying latency for pongs/results if available or just update based on last action?
-            // The requirement says "Latency calculated from ping/pong"
-            // If the response is a result of a ping, we can calculate RTT.
-            // Since we don't have request IDs in this simple protocol, let's just
-            // assume the last request matches this response if we want strict latency,
-            // or just use the ping/pong mechanism.
+            // 2. Error Handling (strict payload.code)
+            if (data.type === 'error') {
+                const code = data.payload?.code || 'E999';
+                const msg = data.payload?.message || 'Unknown Error';
+                addLog('ERROR', `[${code}] ${msg}`, data.payload?.details || data);
+                return;
+            }
 
-            // Actually, for the Status Bar latency, we should probably send periodic pings or
-            // update it when we receive a pong.
-
-            if (data.type === 'execution_result' || data.status === 'success') {
-                addLog('RECV', 'Response', data);
-            } else if (data.type === 'error') {
-                addLog('ERROR', data.message || 'Unknown error', data);
+            // 3. Log Success
+            if (['system_pong', 'echo_payload', 'execution_result'].includes(data.type)) {
+                addLog('RECV', data.type, data.payload || data);
             } else {
                 addLog('RECV', 'Message', data);
-            }
-
-            // Special handling for ping response (runtime returns direct dict, not wrapped in type=execution_result sometimes?)
-            // Based on stdlib: system_ping returns { "status": "success", "message": "pong", ... }
-            // Runtime wraps it?
-            // Looking at server_demo.py/test_client.py output:
-            // Received: { "status": "success", "message": "pong", ... }
-            // It seems it returns the result directly if it's not an error?
-            // Or `handle_client` logic:
-            // result = await runtime.execute_decision(...)
-            // response = result['result']
-            // await ws.send(json.dumps(response))
-
-            // So if action is system_ping, response is the dict from system_ping.
-            if (data.message === 'pong') {
-                // Calculate latency based on last ping?
-                // Since we don't have ID, let's assume it correlates to the last ping we sent.
-                // Or better, for the 'Latency: 23ms' display, we could insert a client-side timestamp in payload
-                // but system_ping doesn't return payload.
-                // We'll approximate or use server processing time if provided.
-
-                // Let's implement a "background ping" for the status bar if we wanted to be fancy,
-                // but for now let's just update latency when we do a manual ping or echo.
-
-                // If we want to show latency for *this* message:
-                // We can't easily without a request ID.
-                // However, the requirement says "Latency calculated from ping/pong".
-                // Let's cheat a bit and say if we just sent a ping, this is the response.
             }
         }
 
@@ -560,11 +502,7 @@
 
         // --- Button Handlers ---
 
-        // Track ping start time for latency calculation
-        let lastPingTime = 0;
-
         function sendPing() {
-            lastPingTime = Date.now();
             sendCommand('system_ping');
         }
 
@@ -609,21 +547,6 @@
             }
         }
 
-        // --- Latency tracking override ---
-        // We hijack the send/recv to update the latency UI
-        const originalHandleResponse = handleResponse;
-        handleResponse = function(data) {
-            const now = Date.now();
-
-            // If it's a ping response (pong)
-            if (data.message === 'pong' && lastPingTime > 0) {
-                const latency = now - lastPingTime;
-                latencyValue.innerText = latency;
-                lastPingTime = 0; // reset
-            }
-
-            originalHandleResponse(data);
-        };
 
         // Initialize
         window.addEventListener('DOMContentLoaded', connect);
