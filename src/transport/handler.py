@@ -4,10 +4,13 @@ import asyncio
 from datetime import datetime
 from typing import Optional, Tuple
 
+from src.storage.db import get_db
 import websockets
 from src.core.events import Events
 
 logger = logging.getLogger(__name__)
+
+db = get_db()
 
 def validate_message(msg: dict) -> Tuple[bool, Optional[str]]:
     """
@@ -81,6 +84,15 @@ async def send_error(websocket, trace_id: str, error_code: str):
         }
     }
 
+    # Log outbound error event
+    db.log_event(
+        trace_id=trace_id,
+        event_type=Events.ERROR,
+        direction='OUTBOUND',
+        payload=error_msg.get('payload'),
+        timestamp=error_msg.get('timestamp')
+    )
+
     try:
         await websocket.send(json.dumps(error_msg))
     except Exception as e:
@@ -93,6 +105,15 @@ async def handle_message(websocket, msg: dict, runtime):
     if not is_valid:
         await send_error(websocket, msg.get('trace_id', 'unknown'), error_code)
         return
+
+    # Log inbound event
+    db.log_event(
+        trace_id=msg.get('trace_id'),
+        event_type=msg.get('type'),
+        direction='INBOUND',
+        payload=msg.get('payload'),
+        timestamp=msg.get('timestamp')
+    )
 
     msg_type = msg['type']
 
@@ -140,6 +161,14 @@ async def execute_via_runtime(websocket, msg: dict, runtime, send_response: bool
     if result.get("status") == "failed":
         await send_error(websocket, msg['trace_id'], "E004")
     else:
+        # Log outbound event
+        db.log_event(
+            trace_id=response['trace_id'],
+            event_type=response['type'],
+            direction='OUTBOUND',
+            payload=response.get('payload'),
+            timestamp=response.get('timestamp')
+        )
         await websocket.send(json.dumps(response))
 
 async def handle_ping(websocket, msg: dict, runtime):
@@ -157,6 +186,15 @@ async def handle_ping(websocket, msg: dict, runtime):
         }
     }
 
+    # Log outbound event
+    db.log_event(
+        trace_id=response['trace_id'],
+        event_type=response['type'],
+        direction='OUTBOUND',
+        payload=response.get('payload'),
+        timestamp=response.get('timestamp')
+    )
+
     await websocket.send(json.dumps(response))
 
 async def handle_echo(websocket, msg: dict, runtime):
@@ -169,6 +207,15 @@ async def handle_echo(websocket, msg: dict, runtime):
         "timestamp": datetime.utcnow().isoformat() + "Z",
         "payload": msg.get("payload", {})
     }
+
+    # Log outbound event
+    db.log_event(
+        trace_id=response['trace_id'],
+        event_type=response['type'],
+        direction='OUTBOUND',
+        payload=response.get('payload'),
+        timestamp=response.get('timestamp')
+    )
 
     await websocket.send(json.dumps(response))
 
