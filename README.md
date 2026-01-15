@@ -29,7 +29,7 @@ python src/examples/server_demo.py
 **Alternative (Local Only):**
 ```bash
 # Just open the local file
-open src/examples/dashboard.html
+open tools/dashboard.html
 ```
 
 ## Architecture
@@ -82,7 +82,7 @@ For development, use the local copy:
 python src/examples/server_demo.py
 
 # Open local dashboard
-open src/examples/dashboard.html
+open tools/dashboard.html
 ```
 
 ### Features
