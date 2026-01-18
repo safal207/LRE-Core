@@ -8,10 +8,13 @@ from typing import Optional, Tuple
 from src.storage.sqlite_backend import SQLiteBackend
 import websockets
 from src.core.events import Events
+from src.auth.middleware import AuthMiddleware
+from src.auth.rbac import check_permission
 
 logger = logging.getLogger(__name__)
 
 db = SQLiteBackend()
+auth_middleware = AuthMiddleware()
 
 
 def validate_message(msg: dict) -> tuple[bool, str | None]:
@@ -88,7 +91,8 @@ async def send_error(websocket, trace_id: str, error_code: str):
         "E004": "Runtime execution failure",
         "E005": "Database write failed",
         "E006": "Required field missing",
-        "E007": "Field type mismatch"
+        "E007": "Field type mismatch",
+        "E008": "Permission denied"
     }
 
     error_msg = {
@@ -116,13 +120,21 @@ async def send_error(websocket, trace_id: str, error_code: str):
     except Exception as e:
         logger.error(f"Failed to send error: {e}")
 
-async def handle_message(websocket, msg: dict, runtime):
+async def handle_message(websocket, msg: dict, runtime, user=None):
     """Handle incoming WebSocket message with validation."""
     # Validate message
     is_valid, error_code = validate_message(msg)
     if not is_valid:
         await send_error(websocket, msg.get('trace_id', 'unknown'), error_code)
         return
+
+    # Check authorization
+    if user:
+        role = user.get("role", "viewer")
+        if not check_permission(role, msg['type']):
+            logger.warning(f"User {user.get('username')} (role: {role}) denied permission for {msg['type']}")
+            await send_error(websocket, msg.get('trace_id', 'unknown'), "E008")
+            return
 
     # Log inbound event
     db.log_event(
@@ -277,11 +289,20 @@ async def handle_client(websocket, runtime):
     remote_addr = getattr(websocket, 'remote_address', 'unknown')
     logger.info(f"New connection from {remote_addr}")
 
+    # Authentication phase
+    user = await auth_middleware.authenticate(websocket)
+    if not user:
+        logger.warning(f"Authentication failed for connection from {remote_addr}")
+        # auth_middleware.authenticate already sent AUTH_FAILURE
+        return
+
+    logger.info(f"User {user.get('username')} authenticated from {remote_addr}")
+
     try:
         async for message in websocket:
             try:
                 msg = json.loads(message)
-                await handle_message(websocket, msg, runtime)
+                await handle_message(websocket, msg, runtime, user=user)
             except json.JSONDecodeError:
                 await send_error(websocket, "unknown", "E001")
             except Exception as e:
