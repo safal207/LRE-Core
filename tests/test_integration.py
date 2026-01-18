@@ -30,6 +30,7 @@ except ImportError:
     dmp = None
 
 from src.lre_dp import LRE_DP
+from src.execution.registry import ActionRegistry
 
 class TestLRECoreIntegration(unittest.TestCase):
     def setUp(self):
@@ -61,8 +62,11 @@ class TestLRECoreIntegration(unittest.TestCase):
         # Mock LRI Routing service
         self.lri_mock = "LRI_Routing_Service"
 
+        # Mock Action Registry
+        self.registry = ActionRegistry()
+
         # We initialize LRE_DP
-        self.lre_dp = LRE_DP(lpi=self.lpi, lri=self.lri_mock)
+        self.lre_dp = LRE_DP(lpi=self.lpi, lri=self.lri_mock, registry=self.registry)
 
         self.dmp = dmp
 
@@ -90,9 +94,24 @@ class TestLRECoreIntegration(unittest.TestCase):
         """
         Test LRE-DP execute decision.
         """
-        action = {"type": "shutdown"}
-        self.lre_dp.execute_decision(action)
-        self.assertEqual(self.lre_dp.state["type"], "shutdown")
+        # Register a mock handler
+        async def mock_handler(ctx):
+            return {"status": "success", "executed": True}
+
+        self.registry.register("test_action", mock_handler)
+
+        action = {
+            "action": "test_action",
+            "agent_id": "test_agent",
+            "payload": {}
+        }
+
+        # LRE_DP.execute_decision is async
+        import asyncio
+        res = asyncio.run(self.lre_dp.execute_decision(action))
+
+        self.assertEqual(res["status"], "executed")
+        self.assertTrue(res["result"]["executed"])
 
     def test_dependencies_present(self):
         """

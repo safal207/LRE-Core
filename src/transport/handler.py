@@ -169,11 +169,24 @@ async def execute_via_runtime(websocket, msg: dict, runtime, send_response: bool
         return result
 
     # Format response
+    # Pipeline execution returns summary where 'result' field contains LRE_DP output
+    # LRE_DP output 'result' field contains the actual action return value
+    dp_output = result.get("result", {})
+    action_result = dp_output.get("result", dp_output)
+
+    resp_type = msg['type']
+    resp_payload = action_result
+
+    # If action result is a protocol message (has type and payload), unwrap it
+    if isinstance(action_result, dict) and 'type' in action_result and 'payload' in action_result:
+        resp_type = action_result['type']
+        resp_payload = action_result['payload']
+
     response = {
         "trace_id": msg['trace_id'],
-        "type": msg['type'],
+        "type": resp_type,
         "timestamp": datetime.utcnow().isoformat() + "Z",
-        "payload": result.get("result", result) # Unwrap if needed
+        "payload": resp_payload
     }
 
     if result.get("status") == "failed":
