@@ -3,15 +3,14 @@ Standard library of actions for LRE.
 """
 
 import logging
-import time  # ← КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: ДОБАВЛЕН IMPORT
 from src.decision.context import DecisionContext
 from src.execution.registry import action
 from src.core.events import Events
-from src.storage.db import get_db
+from src.storage.sqlite_backend import SQLiteBackend
 
 logger = logging.getLogger(__name__)
 
-db = get_db()
+db = SQLiteBackend()
 
 # Note: These use the default registry via @action decorator
 

@@ -1,7 +1,7 @@
 import pytest
 import tempfile
 import os
-from src.storage.db import Database
+from src.storage.sqlite_backend import SQLiteBackend
 from src.core.events import Events
 
 
@@ -11,7 +11,7 @@ def temp_db():
     with tempfile.NamedTemporaryFile(delete=False, suffix='.db') as f:
         db_path = f.name
 
-    db = Database(db_path)
+    db = SQLiteBackend(db_path)
     yield db
 
     # Cleanup
