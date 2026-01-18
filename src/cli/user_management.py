@@ -59,6 +59,29 @@ def deactivate_user_cmd(args):
     print(f"Successfully deactivated user: {args.username}")
 
 
+def change_password_cmd(args):
+    """Change user's password"""
+    user = user_store.get_user_by_username(args.username)
+    if not user:
+        print(f"Error: User '{args.username}' not found")
+        sys.exit(1)
+
+    password = args.password
+    if not password:
+        password = getpass.getpass(f"Enter new password for {args.username}: ")
+        confirm = getpass.getpass("Confirm password: ")
+        if password != confirm:
+            print("Error: Passwords do not match")
+            sys.exit(1)
+
+    try:
+        new_hash = User.hash_password(password)
+        user_store.update_password(user.user_id, new_hash)
+        print(f"Successfully updated password for user: {args.username}")
+    except Exception as e:
+        print(f"Error: {e}")
+        sys.exit(1)
+
 def main():
     parser = argparse.ArgumentParser(description="LRE-Core User Management CLI")
     subparsers = parser.add_subparsers(dest="command", help="Command to execute")
@@ -77,6 +100,11 @@ def main():
     deactivate_parser = subparsers.add_parser("deactivate", help="Deactivate a user")
     deactivate_parser.add_argument("username", help="Username to deactivate")
 
+    # Change password
+    password_parser = subparsers.add_parser("change-password", help="Change a user's password")
+    password_parser.add_argument("username", help="Username to change password for")
+    password_parser.add_argument("--password", help="New password (will prompt if not provided)")
+
     args = parser.parse_args()
 
     if args.command == "create":
@@ -85,6 +113,8 @@ def main():
         list_users_cmd(args)
     elif args.command == "deactivate":
         deactivate_user_cmd(args)
+    elif args.command == "change-password":
+        change_password_cmd(args)
     else:
         parser.print_help()
 

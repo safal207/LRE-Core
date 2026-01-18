@@ -81,3 +81,90 @@ async def test_authenticate_failure_invalid_token(middleware):
     sent_msg = json.loads(websocket.send.call_args[0][0])
     assert sent_msg["type"] == Events.AUTH_FAILURE
     assert sent_msg["payload"]["code"] == "INVALID_TOKEN"
+
+@pytest.fixture
+def mock_user_store():
+    store = MagicMock()
+    user = MagicMock()
+    user.username = "admin"
+    user.user_id = "user_admin"
+    user.role = "admin"
+    user.is_active = True
+    user.verify_password.side_effect = lambda p: p == "correct_password"
+    user.to_dict.return_value = {"username": "admin", "role": "admin"}
+    store.get_user_by_username.return_value = user
+    return store
+
+@pytest.mark.asyncio
+async def test_authenticate_login_success(mock_user_store):
+    middleware = AuthMiddleware(user_store=mock_user_store)
+    websocket = AsyncMock()
+
+    auth_login = {
+        "type": Events.AUTH_LOGIN,
+        "trace_id": "trace_1",
+        "payload": {"username": "admin", "password": "correct_password"}
+    }
+    websocket.recv.return_value = json.dumps(auth_login)
+
+    payload = await middleware.authenticate(websocket)
+
+    assert payload is not None
+    assert payload["username"] == "admin"
+
+    # Verify auth_token message sent
+    websocket.send.assert_called()
+    sent_msg = json.loads(websocket.send.call_args[0][0])
+    assert sent_msg["type"] == Events.AUTH_TOKEN
+    assert "access_token" in sent_msg["payload"]
+
+@pytest.mark.asyncio
+async def test_authenticate_login_failure(mock_user_store):
+    middleware = AuthMiddleware(user_store=mock_user_store)
+    websocket = AsyncMock()
+
+    auth_login = {
+        "type": Events.AUTH_LOGIN,
+        "trace_id": "trace_1",
+        "payload": {"username": "admin", "password": "wrong_password"}
+    }
+    websocket.recv.return_value = json.dumps(auth_login)
+
+    payload = await middleware.authenticate(websocket)
+
+    assert payload is None
+
+    # Verify auth_failure message sent
+    websocket.send.assert_called()
+    sent_msg = json.loads(websocket.send.call_args[0][0])
+    assert sent_msg["type"] == Events.AUTH_FAILURE
+    assert sent_msg["payload"]["code"] == "INVALID_CREDENTIALS"
+
+@pytest.mark.asyncio
+async def test_brute_force_lockout(mock_user_store):
+    middleware = AuthMiddleware(user_store=mock_user_store)
+    websocket = AsyncMock()
+
+    # 5 failed attempts
+    for _ in range(5):
+        auth_login = {
+            "type": Events.AUTH_LOGIN,
+            "trace_id": "trace_1",
+            "payload": {"username": "admin", "password": "wrong_password"}
+        }
+        websocket.recv.return_value = json.dumps(auth_login)
+        await middleware.authenticate(websocket)
+
+    # 6th attempt should be rate limited
+    auth_login = {
+        "type": Events.AUTH_LOGIN,
+        "trace_id": "trace_1",
+        "payload": {"username": "admin", "password": "correct_password"}
+    }
+    websocket.recv.return_value = json.dumps(auth_login)
+
+    payload = await middleware.authenticate(websocket)
+    assert payload is None
+
+    sent_msg = json.loads(websocket.send.call_args[0][0])
+    assert sent_msg["payload"]["code"] == "RATE_LIMITED"

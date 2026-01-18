@@ -104,6 +104,8 @@ class User:
                 self.password_hash
             )
         except Exception:
+            # Perform dummy work to mitigate timing attacks
+            bcrypt.hashpw(b"dummy_password", bcrypt.gensalt(rounds=12))
             return False
 
     @classmethod

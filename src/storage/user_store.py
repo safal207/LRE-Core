@@ -194,6 +194,22 @@ class UserStore:
             """, (user_id,))
             conn.commit()
 
+    def update_password(self, user_id: str, password_hash: bytes) -> None:
+        """
+        Update user's password hash
+
+        Args:
+            user_id: User ID
+            password_hash: New password hash
+        """
+        with sqlite3.connect(self.db_path) as conn:
+            conn.execute("""
+                UPDATE users
+                SET password_hash = ?
+                WHERE user_id = ?
+            """, (password_hash, user_id))
+            conn.commit()
+
     def _row_to_user(self, row: sqlite3.Row) -> User:
         """Convert database row to User instance"""
         # created_at and last_login are stored as timestamps (REAL)

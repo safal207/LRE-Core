@@ -821,24 +821,75 @@
         // Login handler
         async function performLogin() {
             const username = document.getElementById('login-username').value;
-            // Since we don't have an HTTP login endpoint, we'll just use a "demo" approach:
-            // The user would normally get a JWT from an API.
-            // For now, let's ask for the token directly OR use a dummy one if it's admin.
-            // Wait, I can't generate a valid HS256 token without the secret.
-            // Let's just prompt for a TOKEN instead of username/password if they aren't admin.
-
             const password = document.getElementById('login-password').value;
-            if (username === 'admin' && password === 'admin123') {
-                // This is a HUGE hack for the demo:
-                // In a real system, you'd NEVER have the secret in the frontend.
-                // But for a LOCAL dev dashboard, we might want to allow it.
-                // For now, let's just tell the user to use the CLI to get a token.
-                alert("Please use the CLI to generate a token and paste it here.\nExample: python3 -c 'from src.auth.jwt_handler import jwt_handler; print(jwt_handler.create_access_token(\"user_default_admin\", \"admin\", \"admin\"))'");
-                const token = prompt("Paste JWT Token here:");
-                if (token) connect(token);
-            } else {
-                alert("Invalid demo credentials. Use admin / admin123");
+
+            if (!username || !password) {
+                document.getElementById('login-error').textContent = 'Username and password required';
+                return;
             }
+
+            // Connect and send auth_login
+            ws = new WebSocket(WS_URL);
+
+            ws.onopen = () => {
+                isConnected = true;
+                statusDot.classList.add('connected');
+                statusText.textContent = 'Connected';
+                addLog('SENT', 'auth_login', {username: username, password: '***'});
+
+                ws.send(JSON.stringify({
+                    type: 'auth_login',
+                    trace_id: crypto.randomUUID(),
+                    timestamp: new Date().toISOString(),
+                    payload: {
+                        username: username,
+                        password: password
+                    }
+                }));
+            };
+
+            ws.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+
+                    if (data.type === 'auth_token') {
+                        addLog('RECV', 'auth_token', {access_token: '***', user: data.payload.user});
+                        // Store token for reconnection if needed
+                        sessionStorage.setItem('lre_token', data.payload.access_token);
+                        document.getElementById('login-overlay').style.display = 'none';
+                        // Switch to normal message handling
+                        ws.onmessage = (e) => handleResponse(JSON.parse(e.data));
+                        return;
+                    }
+
+                    if (data.type === 'auth_failure') {
+                        addLog('ERROR', 'auth_failure', data.payload);
+                        document.getElementById('login-error').textContent = data.payload.error;
+                        ws.close();
+                        return;
+                    }
+
+                    handleResponse(data);
+                } catch (e) {
+                    addLog('ERROR', 'Failed to parse message', {error: e.message});
+                }
+            };
+
+            ws.onerror = (error) => {
+                addLog('ERROR', 'WebSocket error', {error: error.message});
+                document.getElementById('login-error').textContent = 'Connection failed';
+            };
+
+            ws.onclose = () => {
+                isConnected = false;
+                statusDot.classList.remove('connected');
+                statusText.textContent = 'Disconnected';
+                addLog('RECV', 'WebSocket disconnected', {});
+
+                // Show login overlay if we disconnected
+                document.getElementById('login-overlay').style.display = 'flex';
+                document.getElementById('login-error').textContent = 'Disconnected from server';
+            };
         }
 
         // Initialize - don't connect automatically
