@@ -156,8 +156,8 @@ class SQLiteBackend:
     ) -> int:
         """Logs an event, returning its ID."""
         if timestamp is None:
-            from datetime import datetime
-            timestamp = datetime.utcnow().isoformat() + 'Z'
+            from datetime import datetime, timezone
+            timestamp = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
         created_at = time.time()
         payload_json = json.dumps(payload) if payload else None
@@ -269,4 +269,36 @@ class SQLiteBackend:
             'unique_traces': unique_traces,
             'event_types': event_types,
             'db_path': self.db_path
+        }
+
+    def get_history_stats(
+        self,
+        trace_id: Optional[str] = None,
+        agent_id: Optional[str] = None,
+        event_type: Optional[str] = None
+    ) -> Dict[str, int]:
+        """Get stats for a filtered set of events, plus global total."""
+        # Global count
+        global_count = self.execute("SELECT COUNT(*) as c FROM events")[0]['c']
+
+        # Filtered counts
+        query = "SELECT COUNT(*) as total, COUNT(DISTINCT trace_id) as traces, COUNT(DISTINCT type) as types FROM events WHERE 1=1"
+        params = []
+        if trace_id:
+            query += " AND trace_id = ?"
+            params.append(trace_id)
+        if agent_id:
+            query += " AND json_extract(payload, '$.agent_id') = ?"
+            params.append(str(agent_id))
+        if event_type:
+            query += " AND type = ?"
+            params.append(event_type)
+
+        res = self.execute(query, tuple(params))
+
+        return {
+            "global_total": global_count,
+            "filtered_total": res[0]['total'],
+            "filtered_traces": res[0]['traces'],
+            "filtered_types": res[0]['types']
         }

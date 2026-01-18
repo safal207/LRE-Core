@@ -1,0 +1,22 @@
+[INFO] __main__: Initializing LRE-Core runtime...
+[INFO] src.runtime: Initializing LRERuntime...
+[INFO] src.runtime: Loaded 8 standard actions
+[WARNING] src.runtime: Failed to import LPI: No module named 'lpi'. Using Mock.
+[INFO] src.runtime: Loaded LRI protocol
+[WARNING] src.runtime: Failed to import DML: No module named 'dml'. Using Mock.
+[INFO] src.runtime: Loaded LRE-DP protocol
+[INFO] src.persistence.engine: Persistence engine initialized: data/lre_core.db
+[INFO] src.runtime: Persistence engine connected to Event Bus
+[INFO] src.runtime: LRERuntime initialized successfully
+[INFO] __main__: Starting WebSocket server on localhost:8000
+[INFO] websockets.server: server listening on 127.0.0.1:8000
+[INFO] websockets.server: server listening on [::1]:8000
+[INFO] websockets.server: connection open
+[INFO] src.transport.handler: New connection from ('::1', 55000, 0, 0)
+[INFO] src.decision.context: Starting decision execution trace_id=36a20396-4b95-40cc-a353-d6f3d2bc7b4c
+[WARNING] src.decision.pipeline: LRI.calculate_route not found, using default route
+[INFO] src.decision.context: Finished decision execution trace_id=36a20396-4b95-40cc-a353-d6f3d2bc7b4c latency=3.29ms status=executed
+[WARNING] src.transport.handler: Event type fetch_history valid but no specific handler. Passing to runtime.
+[INFO] src.decision.context: Starting decision execution trace_id=c57de012-a79b-44d1-af5e-3cca5f411c2c
+[WARNING] src.decision.pipeline: LRI.calculate_route not found, using default route
+[INFO] src.decision.context: Finished decision execution trace_id=c57de012-a79b-44d1-af5e-3cca5f411c2c latency=3.75ms status=executed

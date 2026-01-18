@@ -296,6 +296,24 @@
             color: var(--liminal-glow);
         }
 
+        /* JSON Modal */
+        #json-modal {
+            z-index: 1100;
+        }
+
+        .json-content {
+            background: #000;
+            padding: var(--spacing-md);
+            border-radius: 8px;
+            overflow: auto;
+            max-height: 400px;
+            font-family: 'Monaco', monospace;
+            font-size: 0.9rem;
+            color: #a5d6ff;
+            border: 1px solid var(--liminal-glow);
+            white-space: pre-wrap;
+        }
+
         .stats {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
@@ -451,6 +469,17 @@
         </div>
     </div>
 
+    <!-- JSON Payload Modal -->
+    <div id="json-modal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h2>📦 Payload Details</h2>
+                <button class="close-btn" onclick="closeJSON()">&times;</button>
+            </div>
+            <pre id="json-display" class="json-content"></pre>
+        </div>
+    </div>
+
     <script>
         const WS_URL = 'ws://localhost:8000';
         const AGENT_ID = 'dashboard_001';
@@ -569,10 +598,19 @@
             const timestamp = new Date().toLocaleTimeString();
             const payloadStr = JSON.stringify(payload, null, 2);
 
-            entry.innerHTML = `
-                <strong>[${timestamp}]</strong> ${type}: ${action}
-                <div style="margin-top: 4px; opacity: 0.7;">${payloadStr.substring(0, 100)}${payloadStr.length > 100 ? '...' : ''}</div>
-            `;
+            // XSS Protection: use textContent for dynamic values
+            const strong = document.createElement('strong');
+            strong.textContent = `[${timestamp}] `;
+            entry.appendChild(strong);
+
+            const actionText = document.createTextNode(`${type}: ${action}`);
+            entry.appendChild(actionText);
+
+            const payloadDiv = document.createElement('div');
+            payloadDiv.style.marginTop = '4px';
+            payloadDiv.style.opacity = '0.7';
+            payloadDiv.textContent = payloadStr.substring(0, 100) + (payloadStr.length > 100 ? '...' : '');
+            entry.appendChild(payloadDiv);
 
             logContainer.insertBefore(entry, logContainer.firstChild);
             eventCount++;
@@ -635,17 +673,12 @@
 
         function handleHistoryResult(data) {
             currentHistory = data.payload.events || [];
+            const stats = data.payload.filtered_stats || {};
 
-            // Update stats
+            // Update stats with accurate server-side data
             document.getElementById('total-events').textContent = data.payload.count || 0;
-
-            // Calculate unique traces
-            const uniqueTraces = new Set(currentHistory.map(e => e.trace_id)).size;
-            document.getElementById('unique-traces').textContent = uniqueTraces;
-
-            // Calculate event types
-            const eventTypes = new Set(currentHistory.map(e => e.type)).size;
-            document.getElementById('event-types-count').textContent = eventTypes;
+            document.getElementById('unique-traces').textContent = stats.traces || 0;
+            document.getElementById('event-types-count').textContent = stats.types || 0;
 
             // Render table
             renderHistoryTable(currentHistory);
@@ -665,32 +698,43 @@
                 return;
             }
 
-            tbody.innerHTML = events.map(event => {
+            tbody.innerHTML = '';
+            events.forEach(event => {
+                const row = document.createElement('tr');
+
                 const payloadPreview = JSON.stringify(event.payload || {}).substring(0, 50);
                 const directionClass = event.direction.toLowerCase();
 
-                return `
-                    <tr>
-                        <td>${event.id}</td>
-                        <td><span class="badge ${directionClass}">${event.direction}</span></td>
-                        <td><code>${event.type}</code></td>
-                        <td><code style="font-size: 0.7rem;">${event.trace_id.substring(0, 8)}...</code></td>
-                        <td>${new Date(event.timestamp).toLocaleString()}</td>
-                        <td>
-                            <span class="json-preview" onclick="showJSON(${event.id})" title="Click to view full payload">
-                                ${payloadPreview}...
-                            </span>
-                        </td>
-                    </tr>
+                row.innerHTML = `
+                    <td>${event.id}</td>
+                    <td><span class="badge ${directionClass}">${event.direction}</span></td>
+                    <td><code class="type-cell"></code></td>
+                    <td><code class="trace-cell" style="font-size: 0.7rem;"></code></td>
+                    <td>${new Date(event.timestamp).toLocaleString()}</td>
+                    <td>
+                        <span class="json-preview" onclick="showJSON(${event.id})" title="Click to view full payload"></span>
+                    </td>
                 `;
-            }).join('');
+
+                // XSS Protection: use textContent for dynamic data
+                row.querySelector('.type-cell').textContent = event.type;
+                row.querySelector('.trace-cell').textContent = `${event.trace_id.substring(0, 8)}...`;
+                row.querySelector('.json-preview').textContent = `${payloadPreview}...`;
+
+                tbody.appendChild(row);
+            });
         }
 
         function showJSON(eventId) {
             const event = currentHistory.find(e => e.id === eventId);
             if (event) {
-                alert(JSON.stringify(event, null, 2));
+                document.getElementById('json-display').textContent = JSON.stringify(event.payload || {}, null, 2);
+                document.getElementById('json-modal').classList.add('active');
             }
+        }
+
+        function closeJSON() {
+            document.getElementById('json-modal').classList.remove('active');
         }
 
         // Initialize

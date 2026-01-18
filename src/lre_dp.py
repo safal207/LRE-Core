@@ -9,10 +9,11 @@ class LRE_DP:
     Liminal Runtime Environment - Decision Protocol
     Executes decisions based on inputs via LPI + LRI.
     """
-    def __init__(self, lpi: Any, lri: Any, registry: ActionRegistry):
+    def __init__(self, lpi: Any, lri: Any, registry: Optional[ActionRegistry] = None):
         self.lpi = lpi
         self.lri = lri
-        self.registry = registry  # ← NEW
+        # Backward compatibility: use provided registry or create a new one
+        self.registry = registry if registry is not None else ActionRegistry()
         self.state = {}
 
     async def execute_decision(self, decision_data: Union[dict, Any]) -> Dict[str, Any]:
