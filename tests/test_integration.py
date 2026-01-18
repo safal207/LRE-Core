@@ -113,6 +113,37 @@ class TestLRECoreIntegration(unittest.TestCase):
         self.assertEqual(res["status"], "executed")
         self.assertTrue(res["result"]["executed"])
 
+    def test_fetch_history_integration(self):
+        """
+        Test real fetch_history action integration.
+        """
+        import asyncio
+        from src.core.events import Events
+
+        # We need to make sure stdlib is loaded to have the action registered
+        from src.execution.registry import set_default_registry
+        set_default_registry(self.registry)
+        import src.execution.stdlib
+
+        # Load stdlib into our test registry
+        # The stdlib uses the default registry, so we should use that or make sure it's wired.
+        # For this test, let's just register the real fetch_history handler into our test registry.
+        from src.execution.stdlib import fetch_history
+        self.registry.register(Events.FETCH_HISTORY, fetch_history)
+
+        action = {
+            "action": Events.FETCH_HISTORY,
+            "agent_id": "test_agent",
+            "payload": {"limit": 5}
+        }
+
+        res = asyncio.run(self.lre_dp.execute_decision(action))
+
+        self.assertEqual(res["status"], "executed")
+        self.assertEqual(res["result"]["type"], Events.HISTORY_RESULT)
+        self.assertIn("events", res["result"]["payload"])
+        self.assertIn("count", res["result"]["payload"])
+
     def test_dependencies_present(self):
         """
         Verify LPI and LRI dependencies are correctly assigned.
