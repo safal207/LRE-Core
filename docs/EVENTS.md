@@ -1,252 +1,65 @@
-# Event Registry
+# Liminal Transport Protocol (LTP) Events
 
-This document is the **single source of truth** for all supported LTP event types.
-
-## Event Specification Template
-
-For each event:
-- **Purpose**: What does this event do?
-- **Direction**: Client→Server, Server→Client, or Bidirectional
-- **Persistence**: Is it stored in database?
-- **Response**: Expected response event (if any)
-- **Payload Schema**: JSON schema for payload
-
----
+This document lists canonical event types used in Liminal Runtime.
 
 ## System Events
 
-### system_ping
+### `system_ping`
+- **Direction**: INBOUND
+- **Description**: Health check initiated by client.
+- **Payload**: `{ "agent_id": "string" }`
 
-**Purpose**: Connection health check and latency measurement
-
-**Direction**: Client → Server
-
-**Persistence**: Yes
-
-**Response**: `system_pong`
-
-**Payload Schema**:
-```json
-{
-  "client_timestamp": "2025-01-14T10:30:00.000Z"  // Optional
-}
-```
-
-**Example**:
-```json
-{
-  "trace_id": "550e8400-e29b-41d4-a716-446655440000",
-  "type": "system_ping",
-  "timestamp": "2025-01-14T10:30:00.000Z",
-  "payload": {
-    "client_timestamp": "2025-01-14T10:30:00.000Z"
-  }
-}
-```
-
----
-
-### system_pong
-
-**Purpose**: Response to system_ping
-
-**Direction**: Server → Client
-
-**Persistence**: Yes
-
-**Response**: None
-
-**Payload Schema**:
-```json
-{
-  "server_timestamp": "2025-01-14T10:30:00.100Z",
-  "latency_ms": 100  // Optional: calculated server-side
-}
-```
-
----
+### `system_pong`
+- **Direction**: OUTBOUND
+- **Description**: Server response to ping.
+- **Payload**: `{ "server_timestamp": "string" }`
 
 ## User Events
 
-### echo_payload
+### `echo_payload`
+- **Direction**: BIDIRECTIONAL
+- **Description**: Debug action that echoes the input payload.
+- **Payload**: User-defined object.
 
-**Purpose**: Payload reflection test for protocol validation
+## Storage & History Events
 
-**Direction**: Bidirectional
+### `fetch_history`
+- **Direction**: INBOUND
+- **Description**: Request event history from the persistence layer.
+- **Payload**:
+  - `limit` (int, optional): Max events to return.
+  - `trace_id` (string, optional): Filter by session.
+  - `agent_id` (string, optional): Filter by agent.
+  - `type` (string, optional): Filter by event type.
 
-**Persistence**: Yes
+### `history_result`
+- **Direction**: OUTBOUND
+- **Description**: Response to `fetch_history`.
+- **Payload**:
+  - `events` (array): List of event objects.
+  - `count` (int): Total events in DB.
+  - `filters` (object): Filters applied to the query.
 
-**Response**: Same event with identical payload
+### `get_agent_status`
+- **Direction**: INBOUND
+- **Description**: Get list of recently active agents.
+- **Payload**: `{ "since_seconds": int }`
 
-**Payload Schema**:
-```json
-{
-  // Any valid JSON object
-}
-```
+### `agent_status_result`
+- **Direction**: OUTBOUND
+- **Description**: List of active agents and their status.
 
-**Example**:
-```json
-{
-  "trace_id": "550e8400-e29b-41d4-a716-446655440000",
-  "type": "echo_payload",
-  "timestamp": "2025-01-14T10:30:00.000Z",
-  "payload": {
-    "test_data": "hello world",
-    "nested": {
-      "value": 42
-    }
-  }
-}
-```
+### `get_db_stats`
+- **Direction**: INBOUND
+- **Description**: Request database statistics.
 
----
+### `db_stats_result`
+- **Direction**: OUTBOUND
+- **Description**: Database metrics (total events, unique traces, etc.).
 
 ## Control Events
 
-### emergency_shutdown
-
-**Purpose**: Graceful system termination
-
-**Direction**: Admin → Server
-
-**Persistence**: Yes
-
-**Response**: Connection closed with status code 1000
-
-**Payload Schema**:
-```json
-{
-  "reason": "string",      // Required: shutdown reason
-  "admin_id": "string"     // Required: admin identifier
-}
-```
-
-**Example**:
-```json
-{
-  "trace_id": "550e8400-e29b-41d4-a716-446655440000",
-  "type": "emergency_shutdown",
-  "timestamp": "2025-01-14T10:30:00.000Z",
-  "payload": {
-    "reason": "Maintenance window",
-    "admin_id": "admin@liminal.dev"
-  }
-}
-```
-
----
-
-## Storage Events
-
-### fetch_history
-
-**Purpose**: Retrieve event log for a session, agent, or event type
-**Direction**: Client → Server
-**Persistence**: Yes (query operation)
-**Response**: `history_result`
-
-**Payload Schema**:
-```json
-{
-  "trace_id": "uuid",      // Optional: filter by session
-  "agent_id": "string",    // Optional: filter by agent
-  "type": "event_type",    // Optional: filter by event type
-  "limit": 100             // Optional: max events (default: 100)
-}
-```
-
-**Example**:
-```json
-{
-  "trace_id": "550e8400-e29b-41d4-a716-446655440000",
-  "type": "fetch_history",
-  "timestamp": "2025-01-15T10:30:00.000Z",
-  "payload": {
-    "agent_id": "agent_001",
-    "limit": 50
-  }
-}
-```
-
----
-
-### history_result
-
-**Purpose**: Response containing filtered event history
-**Direction**: Server → Client
-**Persistence**: Yes
-**Response**: None
-
-**Payload Schema**:
-```json
-{
-  "events": [
-    {
-      "id": 123,
-      "trace_id": "uuid",
-      "type": "system_ping",
-      "timestamp": "2025-01-15T10:30:00.000Z",
-      "direction": "INBOUND",
-      "payload": {},
-      "created_at": 1705315800.123
-    }
-  ],
-  "count": 1,
-  "filters": {}
-}
-```
-
----
-
-## Error Events
-
-### error
-
-**Purpose**: Protocol or runtime error notification
-
-**Direction**: Server → Client
-
-**Persistence**: Yes
-
-**Response**: None
-
-**Payload Schema**:
-```json
-{
-  "code": "string",        // Error code (see PROTOCOL.md)
-  "message": "string",     // Human-readable message
-  "details": "string"      // Optional: additional context
-}
-```
-
----
-
-## Adding New Events
-
-To add a new event type:
-
-1. Add constant to `src/core/events.py`
-2. Document here with full specification
-3. Implement handler in `src/transport/handler.py`
-4. Add tests in `tests/`
-5. Update CHANGELOG.md
-
----
-
-## Event Statistics
-
-| Category | Count |
-|----------|-------|
-| System   | 2     |
-| User     | 1     |
-| Control  | 1     |
-| Storage  | 2     |
-| Error    | 1     |
-| **Total**| **7** |
-
----
-
-## Version History
-
-- **v1.0** (2025-01-14): Initial registry with core events
+### `emergency_shutdown`
+- **Direction**: INBOUND
+- **Description**: Initiates emergency shutdown.
+- **Payload**: `{ "reason": "string", "admin_id": "string" }`

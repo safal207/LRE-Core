@@ -7,3 +7,5 @@ env/
 venv/
 .env
 .DS_Store
+data/*.db
+*.log

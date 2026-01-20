@@ -3,6 +3,7 @@ Standard library of actions for LRE.
 """
 
 import logging
+import time
 from src.decision.context import DecisionContext
 from src.execution.registry import action
 from src.core.events import Events
@@ -112,11 +113,23 @@ async def fetch_history(context: DecisionContext) -> dict:
         limit=limit
     )
 
+    # Get stats for these filters
+    stats = db.get_history_stats(
+        trace_id=trace_id,
+        agent_id=agent_id,
+        event_type=event_type
+    )
+
     return {
         "type": Events.HISTORY_RESULT,
         "payload": {
             "events": events,
-            "count": len(events),
+            "count": stats["global_total"],
+            "filtered_stats": {
+                "total": stats["filtered_total"],
+                "traces": stats["filtered_traces"],
+                "types": stats["filtered_types"]
+            },
             "filters": {
                 "trace_id": trace_id,
                 "agent_id": agent_id,

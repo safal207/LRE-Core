@@ -42,6 +42,10 @@ class Events:
     # Storage events - persistence operations
     FETCH_HISTORY = "fetch_history"
     HISTORY_RESULT = "history_result"
+    GET_AGENT_STATUS = "get_agent_status"
+    AGENT_STATUS_RESULT = "agent_status_result"
+    GET_DB_STATS = "get_db_stats"
+    DB_STATS_RESULT = "db_stats_result"
 
     # Error events
     ERROR = "error"

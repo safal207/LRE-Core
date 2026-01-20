@@ -3,275 +3,347 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Liminal Runtime Dashboard</title>
+    <title>🌊 Liminal Runtime Dashboard</title>
     <style>
-        /* Design System */
         :root {
-            --liminal-void: #0a0e27;      /* Background */
-            --liminal-surface: #1a1f3a;   /* Cards */
-            --liminal-border: #2a3354;    /* Borders */
-            --liminal-mist: #c5d3e8;      /* Primary text */
-            --liminal-mist-dim: #8b9bb8;  /* Secondary text */
-            --liminal-glow: #64ffda;      /* Accent/CTA */
-            --liminal-warm: #ffb4ab;      /* Received messages */
-            --liminal-error: #ff6b6b;     /* Errors */
-            --liminal-success: #51cf66;   /* Success */
-            --liminal-cyan: #00bcd4;      /* System messages */
-
-            --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro', system-ui, sans-serif;
-            --radius-btn: 8px;
+            --liminal-dark: #0a0e27;
+            --liminal-glow: #64ffda;
+            --liminal-purple: #b794f6;
+            --liminal-mist: rgba(100, 255, 218, 0.1);
+            --liminal-mist-dim: rgba(100, 255, 218, 0.5);
+            --spacing-sm: 8px;
+            --spacing-md: 16px;
+            --spacing-lg: 24px;
             --radius-card: 12px;
-            --spacing-sm: 0.5rem;
-            --spacing-md: 1rem;
-            --spacing-lg: 1.5rem;
-            --transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
         }
 
         * {
-            box-sizing: border-box;
             margin: 0;
             padding: 0;
+            box-sizing: border-box;
         }
 
         body {
-            background-color: var(--liminal-void);
-            color: var(--liminal-mist);
-            font-family: var(--font-family);
-            line-height: 1.5;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, var(--liminal-dark) 0%, #1a1f3a 100%);
+            color: #e0e7ff;
             min-height: 100vh;
-            display: flex;
-            justify-content: center;
             padding: var(--spacing-lg);
         }
 
         .container {
-            width: 100%;
-            max-width: 800px;
-            display: flex;
-            flex-direction: column;
-            gap: var(--spacing-lg);
+            max-width: 1200px;
+            margin: 0 auto;
         }
 
-        /* Header */
         header {
             text-align: center;
-            padding: var(--spacing-md);
-            border: 1px solid var(--liminal-border);
-            border-radius: var(--radius-card);
-            background-color: var(--liminal-surface);
+            margin-bottom: var(--spacing-lg);
         }
 
         h1 {
-            font-size: 1.5rem;
-            font-weight: 600;
+            font-size: 2.5rem;
+            background: linear-gradient(135deg, var(--liminal-glow), var(--liminal-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
             margin-bottom: var(--spacing-sm);
         }
 
         .tagline {
             color: var(--liminal-mist-dim);
-            font-size: 0.9rem;
+            font-size: 0.95rem;
         }
 
-        /* Status Bar */
         .status-bar {
-            background-color: var(--liminal-surface);
-            border: 1px solid var(--liminal-border);
-            border-radius: var(--radius-card);
-            padding: var(--spacing-md);
             display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 0.9rem;
-            font-family: monospace;
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-lg);
+            flex-wrap: wrap;
         }
 
         .status-indicator {
-            display: flex;
-            align-items: center;
-            gap: var(--spacing-sm);
-        }
-
-        .dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            background-color: var(--liminal-error);
-            transition: var(--transition);
-        }
-
-        .dot.connected {
-            background-color: var(--liminal-success);
-            box-shadow: 0 0 8px var(--liminal-success);
-        }
-
-        .latency-badge {
-            color: var(--liminal-mist-dim);
-        }
-
-        .connection-url {
-            color: var(--liminal-mist-dim);
-        }
-
-        /* Quick Actions */
-        .quick-actions {
-            background-color: var(--liminal-surface);
-            border: 1px solid var(--liminal-border);
+            flex: 1;
+            min-width: 200px;
+            background: var(--liminal-mist);
+            border: 1px solid var(--liminal-glow);
             border-radius: var(--radius-card);
-            padding: var(--spacing-lg);
-        }
-
-        h2 {
-            font-size: 1.1rem;
-            margin-bottom: var(--spacing-md);
+            padding: var(--spacing-md);
             display: flex;
             align-items: center;
             gap: var(--spacing-sm);
         }
 
-        .actions-grid {
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #ef4444;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        .status-dot.connected {
+            background: var(--liminal-glow);
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .controls {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: var(--spacing-md);
+            margin-bottom: var(--spacing-lg);
         }
 
         button {
-            background-color: rgba(255, 255, 255, 0.05);
-            border: 1px solid var(--liminal-border);
-            border-radius: var(--radius-btn);
-            color: var(--liminal-mist);
+            background: var(--liminal-mist);
+            border: 1px solid var(--liminal-glow);
+            color: var(--liminal-glow);
             padding: var(--spacing-md);
+            border-radius: var(--radius-card);
             cursor: pointer;
-            transition: var(--transition);
-            font-family: var(--font-family);
-            font-size: 0.9rem;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
         }
 
-        button:hover:not(:disabled) {
+        button:hover {
+            background: var(--liminal-glow);
+            color: var(--liminal-dark);
             transform: translateY(-2px);
-            border-color: var(--liminal-glow);
-            box-shadow: 0 4px 12px rgba(100, 255, 218, 0.1);
+            box-shadow: 0 4px 12px rgba(100, 255, 218, 0.3);
         }
 
-        button:active:not(:disabled) {
+        button:active {
             transform: translateY(0);
         }
 
-        button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
-        button.danger {
-            border-color: rgba(255, 107, 107, 0.3);
-            color: var(--liminal-error);
-        }
-
-        button.danger:hover:not(:disabled) {
-            border-color: var(--liminal-error);
-            box-shadow: 0 4px 12px rgba(255, 107, 107, 0.1);
-            background-color: rgba(255, 107, 107, 0.05);
-        }
-
-        /* Event Stream */
         .event-stream {
-            background-color: var(--liminal-surface);
-            border: 1px solid var(--liminal-border);
+            background: var(--liminal-mist);
+            border: 1px solid var(--liminal-glow);
             border-radius: var(--radius-card);
-            padding: var(--spacing-lg);
-            display: flex;
-            flex-direction: column;
-            flex-grow: 1;
-            min-height: 400px;
-        }
-
-        .stream-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: var(--spacing-md);
-        }
-
-        .log-container {
-            background-color: rgba(0, 0, 0, 0.2);
-            border: 1px solid var(--liminal-border);
-            border-radius: var(--radius-btn);
             padding: var(--spacing-md);
-            height: 300px;
+            height: 400px;
             overflow-y: auto;
-            font-family: monospace;
-            font-size: 0.85rem;
-            display: flex;
-            flex-direction: column;
-            gap: var(--spacing-sm);
         }
 
-        /* Scrollbar Styling */
-        .log-container::-webkit-scrollbar {
-            width: 8px;
-        }
-
-        .log-container::-webkit-scrollbar-track {
-            background: transparent;
-        }
-
-        .log-container::-webkit-scrollbar-thumb {
-            background-color: var(--liminal-border);
-            border-radius: 4px;
+        .event-stream h2 {
+            margin-bottom: var(--spacing-md);
+            color: var(--liminal-glow);
         }
 
         .log-entry {
+            padding: var(--spacing-sm);
+            margin-bottom: var(--spacing-sm);
+            border-radius: 6px;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 0.85rem;
+            border-left: 3px solid;
+        }
+
+        .log-entry.SENT {
+            background: rgba(59, 130, 246, 0.1);
+            border-color: #3b82f6;
+        }
+
+        .log-entry.RECV {
+            background: rgba(34, 197, 94, 0.1);
+            border-color: #22c55e;
+        }
+
+        .log-entry.ERROR {
+            background: rgba(239, 68, 68, 0.1);
+            border-color: #ef4444;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(10, 14, 39, 0.95);
+            backdrop-filter: blur(10px);
+        }
+
+        .modal.active {
             display: flex;
-            gap: var(--spacing-sm);
-            padding-bottom: 4px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            align-items: center;
+            justify-content: center;
         }
 
-        .log-time {
-            color: var(--liminal-mist-dim);
-            min-width: 65px;
+        .modal-content {
+            background: var(--liminal-dark);
+            border: 2px solid var(--liminal-glow);
+            border-radius: var(--radius-card);
+            padding: var(--spacing-lg);
+            max-width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            width: 1000px;
         }
 
-        .log-type {
-            font-weight: bold;
-            min-width: 60px;
-        }
-
-        .type-system { color: var(--liminal-cyan); }
-        .type-sent { color: var(--liminal-success); }
-        .type-recv { color: var(--liminal-warm); }
-        .type-error { color: var(--liminal-error); }
-
-        .log-content {
-            white-space: pre-wrap;
-            word-break: break-all;
-        }
-
-        .empty-state {
-            color: var(--liminal-mist-dim);
-            text-align: center;
-            margin-top: 2rem;
-            font-style: italic;
-        }
-
-        .stream-footer {
+        .modal-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-top: var(--spacing-md);
-            font-size: 0.85rem;
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .modal-header h2 {
+            color: var(--liminal-glow);
+        }
+
+        .close-btn {
+            background: transparent;
+            border: none;
+            color: var(--liminal-glow);
+            font-size: 2rem;
+            cursor: pointer;
+            padding: 0;
+            width: 40px;
+            height: 40px;
+        }
+
+        .filters {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-sm);
+        }
+
+        .filter-group label {
             color: var(--liminal-mist-dim);
+            font-size: 0.85rem;
         }
 
-        .btn-sm {
-            padding: 4px 12px;
-            font-size: 0.8rem;
+        .filter-group input,
+        .filter-group select {
+            background: var(--liminal-mist);
+            border: 1px solid var(--liminal-glow);
+            color: #e0e7ff;
+            padding: var(--spacing-sm);
+            border-radius: 6px;
+            font-size: 0.9rem;
         }
 
+        .history-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: var(--spacing-md);
+        }
+
+        .history-table th,
+        .history-table td {
+            padding: var(--spacing-sm);
+            text-align: left;
+            border-bottom: 1px solid var(--liminal-mist);
+        }
+
+        .history-table th {
+            background: var(--liminal-mist);
+            color: var(--liminal-glow);
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+        }
+
+        .history-table tr:hover {
+            background: var(--liminal-mist);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .badge.inbound {
+            background: rgba(59, 130, 246, 0.2);
+            color: #60a5fa;
+        }
+
+        .badge.outbound {
+            background: rgba(34, 197, 94, 0.2);
+            color: #4ade80;
+        }
+
+        .json-preview {
+            font-family: 'Monaco', monospace;
+            font-size: 0.75rem;
+            color: var(--liminal-mist-dim);
+            max-width: 300px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            cursor: pointer;
+        }
+
+        .json-preview:hover {
+            color: var(--liminal-glow);
+        }
+
+        /* JSON Modal */
+        #json-modal {
+            z-index: 1100;
+        }
+
+        .json-content {
+            background: #000;
+            padding: var(--spacing-md);
+            border-radius: 8px;
+            overflow: auto;
+            max-height: 400px;
+            font-family: 'Monaco', monospace;
+            font-size: 0.9rem;
+            color: #a5d6ff;
+            border: 1px solid var(--liminal-glow);
+            white-space: pre-wrap;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .stat-card {
+            background: var(--liminal-mist);
+            border: 1px solid var(--liminal-glow);
+            border-radius: var(--radius-card);
+            padding: var(--spacing-md);
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            color: var(--liminal-glow);
+            font-weight: bold;
+        }
+
+        .stat-label {
+            color: var(--liminal-mist-dim);
+            font-size: 0.85rem;
+            margin-top: var(--spacing-sm);
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <!-- Header -->
         <header>
             <h1>🌊 Liminal Runtime</h1>
             <div class="tagline">AI Governance Layer • Presence-Aware Decisions</div>
@@ -280,84 +352,160 @@
         <!-- Status Bar -->
         <div class="status-bar">
             <div class="status-indicator">
-                <div id="status-dot" class="dot"></div>
-                <span id="status-text">Disconnected</span>
+                <div class="status-dot" id="status-dot"></div>
+                <div>
+                    <strong>WebSocket:</strong>
+                    <span id="status-text">Disconnected</span>
+                </div>
             </div>
-            <div class="latency-badge">Latency: <span id="latency-value">--</span>ms</div>
-            <div class="connection-url">ws://localhost:8000</div>
+            <div class="status-indicator">
+                <div>
+                    <strong>Latency:</strong>
+                    <span id="latency">—</span>ms
+                </div>
+            </div>
+            <div class="status-indicator">
+                <div>
+                    <strong>Events:</strong>
+                    <span id="event-count">0</span>
+                </div>
+            </div>
         </div>
 
-        <!-- Quick Actions -->
-        <section class="quick-actions">
-            <h2>⚡ Quick Actions</h2>
-            <div class="actions-grid">
-                <button id="btn-ping" onclick="sendPing()">System Ping</button>
-                <button id="btn-echo" onclick="sendEcho()">Echo Test</button>
-                <button id="btn-custom" onclick="sendCustom()">Custom Payload</button>
-                <button id="btn-shutdown" class="danger" onclick="sendShutdown()">Shutdown</button>
-            </div>
-        </section>
+        <!-- Controls -->
+        <div class="controls">
+            <button onclick="sendPing()">🏓 Send Ping</button>
+            <button onclick="sendEcho()">📢 Send Echo</button>
+            <button onclick="showHistory()">📜 View History</button>
+            <button onclick="clearLogs()">🧹 Clear Logs</button>
+        </div>
 
         <!-- Event Stream -->
-        <section class="event-stream">
-            <div class="stream-header">
-                <h2>📡 Event Stream</h2>
-                <div class="live-indicator" style="display: flex; align-items: center; gap: 6px; font-size: 0.8rem; color: var(--liminal-success);">
-                    <span class="dot connected" style="width: 8px; height: 8px;"></span> Live
+        <div class="event-stream">
+            <h2>📡 Event Stream</h2>
+            <div id="log-container"></div>
+        </div>
+    </div>
+
+    <!-- History Modal -->
+    <div id="history-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>📜 Event History</h2>
+                <button class="close-btn" onclick="closeHistory()">&times;</button>
+            </div>
+
+            <!-- Stats -->
+            <div class="stats">
+                <div class="stat-card">
+                    <div class="stat-value" id="total-events">—</div>
+                    <div class="stat-label">Total Events</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="unique-traces">—</div>
+                    <div class="stat-label">Unique Sessions</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="event-types-count">—</div>
+                    <div class="stat-label">Event Types</div>
                 </div>
             </div>
 
-            <div id="log-container" class="log-container">
-                <div class="empty-state">Waiting for connection...</div>
+            <!-- Filters -->
+            <div class="filters">
+                <div class="filter-group">
+                    <label>Filter by Trace ID:</label>
+                    <input type="text" id="filter-trace" placeholder="Enter trace_id...">
+                </div>
+                <div class="filter-group">
+                    <label>Filter by Agent ID:</label>
+                    <input type="text" id="filter-agent" placeholder="Enter agent_id...">
+                </div>
+                <div class="filter-group">
+                    <label>Filter by Event Type:</label>
+                    <select id="filter-type">
+                        <option value="">All Types</option>
+                        <option value="system_ping">system_ping</option>
+                        <option value="system_pong">system_pong</option>
+                        <option value="echo_payload">echo_payload</option>
+                        <option value="fetch_history">fetch_history</option>
+                        <option value="history_result">history_result</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Limit:</label>
+                    <select id="filter-limit">
+                        <option value="50">50 events</option>
+                        <option value="100" selected>100 events</option>
+                        <option value="500">500 events</option>
+                    </select>
+                </div>
             </div>
 
-            <div class="stream-footer">
-                <span id="event-count">0 events</span>
-                <button class="btn-sm" onclick="clearLog()">Clear Log</button>
+            <button onclick="applyFilters()" style="width: 100%; margin-bottom: 16px;">🔍 Apply Filters</button>
+
+            <!-- History Table -->
+            <div style="overflow-x: auto;">
+                <table class="history-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Direction</th>
+                            <th>Type</th>
+                            <th>Trace ID</th>
+                            <th>Timestamp</th>
+                            <th>Payload</th>
+                        </tr>
+                    </thead>
+                    <tbody id="history-tbody">
+                        <tr>
+                            <td colspan="6" style="text-align: center; color: var(--liminal-mist-dim);">
+                                Loading history...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
-        </section>
+        </div>
+    </div>
+
+    <!-- JSON Payload Modal -->
+    <div id="json-modal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h2>📦 Payload Details</h2>
+                <button class="close-btn" onclick="closeJSON()">&times;</button>
+            </div>
+            <pre id="json-display" class="json-content"></pre>
+        </div>
     </div>
 
     <script>
-        // --- Configuration ---
         const WS_URL = 'ws://localhost:8000';
-        const AGENT_ID = 'dashboard_client';
+        const AGENT_ID = 'dashboard_001';
 
-        // --- State ---
         let ws = null;
         let isConnected = false;
         let eventCount = 0;
         let lastPingTime = null;
+        let currentHistory = [];
 
-        // --- DOM Elements ---
+        // DOM Elements
         const statusDot = document.getElementById('status-dot');
         const statusText = document.getElementById('status-text');
-        const latencyValue = document.getElementById('latency-value');
-        const logContainer = document.getElementById('log-container');
+        const latencyValue = document.getElementById('latency');
         const eventCountEl = document.getElementById('event-count');
+        const logContainer = document.getElementById('log-container');
 
-        const btnPing = document.getElementById('btn-ping');
-        const btnEcho = document.getElementById('btn-echo');
-        const btnCustom = document.getElementById('btn-custom');
-        const btnShutdown = document.getElementById('btn-shutdown');
-        const allButtons = [btnPing, btnEcho, btnCustom, btnShutdown];
-
-        // --- WebSocket Logic ---
+        // Connect to WebSocket
         function connect() {
-            addLog('SYSTEM', 'Connecting to ' + WS_URL + '...');
-
-            try {
-                ws = new WebSocket(WS_URL);
-            } catch (e) {
-                addLog('ERROR', 'Failed to create WebSocket: ' + e.message);
-                return;
-            }
+            ws = new WebSocket(WS_URL);
 
             ws.onopen = () => {
                 isConnected = true;
-                updateStatus(true);
-                addLog('SYSTEM', 'Connected to LTP server');
-                enableButtons(true);
+                statusDot.classList.add('connected');
+                statusText.textContent = 'Connected';
+                addLog('RECV', 'WebSocket connected', {});
             };
 
             ws.onmessage = (event) => {
@@ -365,41 +513,37 @@
                     const data = JSON.parse(event.data);
                     handleResponse(data);
                 } catch (e) {
-                    addLog('ERROR', 'Failed to parse message: ' + event.data);
+                    addLog('ERROR', 'Failed to parse message', {error: e.message});
                 }
             };
 
             ws.onerror = (error) => {
-                addLog('ERROR', 'Connection error');
-                console.error('WebSocket Error:', error);
+                addLog('ERROR', 'WebSocket error', {error: error.message});
             };
 
-            ws.onclose = (event) => {
+            ws.onclose = () => {
                 isConnected = false;
-                updateStatus(false);
-                addLog('SYSTEM', `Disconnected (Code: ${event.code})`);
-                enableButtons(false);
+                statusDot.classList.remove('connected');
+                statusText.textContent = 'Disconnected';
+                addLog('RECV', 'WebSocket disconnected', {});
 
-                // Auto-reconnect after 3s
-                setTimeout(() => {
-                    if (!isConnected) connect();
-                }, 3000);
+                // Reconnect after 3 seconds
+                setTimeout(connect, 3000);
             };
         }
 
         function sendCommand(action, payload = {}) {
             if (!isConnected) {
-                addLog('ERROR', 'Not connected to server');
+                addLog('ERROR', 'Not connected to server', {});
                 return;
             }
 
-            const trace_id = crypto.randomUUID(); // Strict UUID v4 compliance
+            const trace_id = crypto.randomUUID();
 
             if (action === 'system_ping') {
-                lastPingTime = performance.now(); // More accurate timing
+                lastPingTime = performance.now();
             }
 
-            // Add agent_id to payload for backward compatibility/logging
             payload.agent_id = AGENT_ID;
 
             const command = {
@@ -410,8 +554,7 @@
             };
 
             try {
-                const jsonStr = JSON.stringify(command);
-                ws.send(jsonStr);
+                ws.send(JSON.stringify(command));
                 addLog('SENT', action, payload);
             } catch (e) {
                 addLog('ERROR', 'Failed to send command: ' + e.message);
@@ -419,14 +562,14 @@
         }
 
         function handleResponse(data) {
-            // 1. Latency Calculation (LTP Spec only)
+            // Latency calculation
             if (data.type === 'system_pong' && lastPingTime) {
                 const latency = Math.round(performance.now() - lastPingTime);
                 latencyValue.innerText = `${latency}`;
                 lastPingTime = null;
             }
 
-            // 2. Error Handling (strict payload.code)
+            // Error handling
             if (data.type === 'error') {
                 const code = data.payload?.code || 'E999';
                 const msg = data.payload?.message || 'Unknown Error';
@@ -434,7 +577,13 @@
                 return;
             }
 
-            // 3. Log Success
+            // History result
+            if (data.type === 'history_result') {
+                handleHistoryResult(data);
+                return;
+            }
+
+            // Log success
             if (['system_pong', 'echo_payload', 'execution_result'].includes(data.type)) {
                 addLog('RECV', data.type, data.payload || data);
             } else {
@@ -442,115 +591,154 @@
             }
         }
 
-        // --- UI Updates ---
-        function updateStatus(connected) {
-            if (connected) {
-                statusDot.className = 'dot connected';
-                statusText.innerText = 'Connected';
-            } else {
-                statusDot.className = 'dot';
-                statusText.innerText = 'Disconnected';
-                latencyValue.innerText = '--';
-            }
-        }
-
-        function enableButtons(enabled) {
-            allButtons.forEach(btn => btn.disabled = !enabled);
-        }
-
-        function addLog(type, title, data = null) {
-            // Remove empty state if present
-            if (eventCount === 0) {
-                logContainer.innerHTML = '';
-            }
-
-            eventCount++;
-            eventCountEl.innerText = `${eventCount} events`;
-
-            const now = new Date();
-            const timeStr = now.toLocaleTimeString('en-US', { hour12: false });
-
+        function addLog(type, action, payload) {
             const entry = document.createElement('div');
-            entry.className = 'log-entry';
+            entry.className = `log-entry ${type}`;
 
-            let typeClass = 'type-system';
-            if (type === 'SENT') typeClass = 'type-sent';
-            if (type === 'RECV') typeClass = 'type-recv';
-            if (type === 'ERROR') typeClass = 'type-error';
+            const timestamp = new Date().toLocaleTimeString();
+            const payloadStr = JSON.stringify(payload, null, 2);
 
-            let content = `<div class="log-content"><strong>${title}</strong>`;
-            if (data) {
-                content += `<br>${JSON.stringify(data, null, 2)}`;
+            // XSS Protection: use textContent for dynamic values
+            const strong = document.createElement('strong');
+            strong.textContent = `[${timestamp}] `;
+            entry.appendChild(strong);
+
+            const actionText = document.createTextNode(`${type}: ${action}`);
+            entry.appendChild(actionText);
+
+            const payloadDiv = document.createElement('div');
+            payloadDiv.style.marginTop = '4px';
+            payloadDiv.style.opacity = '0.7';
+            payloadDiv.textContent = payloadStr.substring(0, 100) + (payloadStr.length > 100 ? '...' : '');
+            entry.appendChild(payloadDiv);
+
+            logContainer.insertBefore(entry, logContainer.firstChild);
+            eventCount++;
+            eventCountEl.textContent = eventCount;
+
+            // Limit logs to 50
+            while (logContainer.children.length > 50) {
+                logContainer.removeChild(logContainer.lastChild);
             }
-            content += `</div>`;
-
-            entry.innerHTML = `
-                <div class="log-time">${timeStr}</div>
-                <div class="log-type ${typeClass}">[${type}]</div>
-                ${content}
-            `;
-
-            logContainer.appendChild(entry);
-            logContainer.scrollTop = logContainer.scrollHeight;
         }
 
-        function clearLog() {
-            logContainer.innerHTML = '<div class="empty-state">Log cleared</div>';
-            eventCount = 0;
-            eventCountEl.innerText = '0 events';
-        }
-
-        // --- Button Handlers ---
-
+        // Button handlers
         function sendPing() {
             sendCommand('system_ping');
         }
 
         function sendEcho() {
-            const payload = {
-                message: "Hello from dashboard",
+            sendCommand('echo_payload', {
+                message: 'Hello from Dashboard!',
                 timestamp: Date.now()
+            });
+        }
+
+        function clearLogs() {
+            logContainer.innerHTML = '';
+            eventCount = 0;
+            eventCountEl.textContent = '0';
+        }
+
+        // History Modal
+        function showHistory() {
+            document.getElementById('history-modal').classList.add('active');
+            loadHistory();
+        }
+
+        function closeHistory() {
+            document.getElementById('history-modal').classList.remove('active');
+        }
+
+        function loadHistory(filters = {}) {
+            const payload = {
+                limit: parseInt(document.getElementById('filter-limit').value) || 100
             };
-            sendCommand('echo_payload', payload);
+
+            if (filters.trace_id) payload.trace_id = filters.trace_id;
+            if (filters.agent_id) payload.agent_id = filters.agent_id;
+            if (filters.type) payload.type = filters.type;
+
+            sendCommand('fetch_history', payload);
         }
 
-        function sendCustom() {
-            const input = prompt("Enter JSON payload:", '{"key": "value"}');
-            if (input) {
-                try {
-                    const payload = JSON.parse(input);
-                    sendCommand('echo_payload', payload); // Using echo for custom payload testing usually
-                    // Or did they want to specify action too?
-                    // Requirement: "Allows user to send custom JSON". "For advanced testing".
-                    // Usually this implies sending a payload to some action.
-                    // Let's assume it's for 'echo_payload' or we could ask for action name.
-                    // But to keep it simple as per "Custom Payload" button label, sending a payload to echo is safest.
-                    // WAIT: "Quick Actions" -> "Custom Payload" might imply generic action testing?
-                    // "Opens a simple prompt or inline input" -> "Allows user to send custom JSON".
-                    // Let's just send it to `echo_payload` as that's the safest generic test.
-                    // If I wanted to be more advanced, I'd ask for Action Name too.
-                    // Given the constraints, I'll stick to sending this as payload to echo_payload,
-                    // OR I can make a prompt that asks for the whole JSON command?
-                    // "Command: {"action": ...}"?
-                    // The button says "Custom Payload". I'll assume it means the payload for a generic test.
-                    // I will stick to sending it to `echo_payload` unless I see a reason otherwise.
-                    // Actually, let's do `echo_payload` to be safe.
-                } catch (e) {
-                    alert("Invalid JSON");
-                }
+        function applyFilters() {
+            const filters = {
+                trace_id: document.getElementById('filter-trace').value.trim(),
+                agent_id: document.getElementById('filter-agent').value.trim(),
+                type: document.getElementById('filter-type').value
+            };
+            loadHistory(filters);
+        }
+
+        function handleHistoryResult(data) {
+            currentHistory = data.payload.events || [];
+            const stats = data.payload.filtered_stats || {};
+
+            // Update stats with accurate server-side data
+            document.getElementById('total-events').textContent = data.payload.count || 0;
+            document.getElementById('unique-traces').textContent = stats.traces || 0;
+            document.getElementById('event-types-count').textContent = stats.types || 0;
+
+            // Render table
+            renderHistoryTable(currentHistory);
+        }
+
+        function renderHistoryTable(events) {
+            const tbody = document.getElementById('history-tbody');
+
+            if (events.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" style="text-align: center; color: var(--liminal-mist-dim);">
+                            No events found
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = '';
+            events.forEach(event => {
+                const row = document.createElement('tr');
+
+                const payloadPreview = JSON.stringify(event.payload || {}).substring(0, 50);
+                const directionClass = event.direction.toLowerCase();
+
+                row.innerHTML = `
+                    <td>${event.id}</td>
+                    <td><span class="badge ${directionClass}">${event.direction}</span></td>
+                    <td><code class="type-cell"></code></td>
+                    <td><code class="trace-cell" style="font-size: 0.7rem;"></code></td>
+                    <td>${new Date(event.timestamp).toLocaleString()}</td>
+                    <td>
+                        <span class="json-preview" onclick="showJSON(${event.id})" title="Click to view full payload"></span>
+                    </td>
+                `;
+
+                // XSS Protection: use textContent for dynamic data
+                row.querySelector('.type-cell').textContent = event.type;
+                row.querySelector('.trace-cell').textContent = `${event.trace_id.substring(0, 8)}...`;
+                row.querySelector('.json-preview').textContent = `${payloadPreview}...`;
+
+                tbody.appendChild(row);
+            });
+        }
+
+        function showJSON(eventId) {
+            const event = currentHistory.find(e => e.id === eventId);
+            if (event) {
+                document.getElementById('json-display').textContent = JSON.stringify(event.payload || {}, null, 2);
+                document.getElementById('json-modal').classList.add('active');
             }
         }
 
-        function sendShutdown() {
-            if (confirm("Are you sure you want to shut down the runtime?")) {
-                sendCommand('emergency_shutdown', { severity: 'normal' });
-            }
+        function closeJSON() {
+            document.getElementById('json-modal').classList.remove('active');
         }
-
 
         // Initialize
         window.addEventListener('DOMContentLoaded', connect);
-
     </script>
 </body>
 </html>
