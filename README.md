@@ -4,7 +4,18 @@
 [![Python](https://img.shields.io/badge/Python-3.8+-blue?style=flat-square)](https://www.python.org/)
 [![WebSocket](https://img.shields.io/badge/WebSocket-Enabled-green?style=flat-square)](https://github.com/safal207/LRE-Core)
 
-> Liminal multi-agent runtime with smart decision governance, presence semantics, and high-load emergency handling.
+> Experimental runtime integration sandbox for Liminal protocols: decision dispatch, presence semantics, identity signals, transport events, history inspection, and dashboard-visible behavior.
+
+## Review links
+
+- Grant evidence: [docs/GRANT_EVIDENCE.md](docs/GRANT_EVIDENCE.md)
+- Event registry: [docs/EVENT_REGISTRY.md](docs/EVENT_REGISTRY.md)
+- Dashboard history viewer: [docs/DASHBOARD_HISTORY_VIEWER.md](docs/DASHBOARD_HISTORY_VIEWER.md)
+- Runtime decision protocol: [src/lre_dp.py](src/lre_dp.py)
+- Event constants: [src/core/events.py](src/core/events.py)
+- Action registry: [src/execution/registry.py](src/execution/registry.py)
+- Server demo: [src/examples/server_demo.py](src/examples/server_demo.py)
+- Dashboard: [tools/dashboard.html](tools/dashboard.html)
 
 ## 🚀 Quick Start
 
@@ -33,13 +44,13 @@ open tools/dashboard.html
 ```
 
 ## Architecture
-LRE-Core serves as the foundational runtime integration environment for the Liminal ecosystem. It orchestrates interaction between key protocols:
+LRE-Core serves as an experimental runtime integration environment for the Liminal ecosystem. It demonstrates interaction between key protocol surfaces:
 
-- **LRE-DP (Liminal Runtime Environment - Decision Protocol)**: Executes decisions based on inputs via LPI + LRI.
+- **LRE-DP (Liminal Runtime Environment - Decision Protocol)**: Executes registered decisions/actions based on runtime inputs.
 - **DML (Decision Markup Language / DMP)**: Proposes actions and defines decision logic.
-- **LPI (Liminal Presence Interface)**: Manages presence semantics.
-- **LRI (Living Relational Identity)**: Handles routing updates.
-- **LTP (Liminal Thread Secure Protocol)**: Transport layer.
+- **LPI (Liminal Presence Interface)**: Provides presence and interaction-context semantics.
+- **LRI (Living Relational Identity)**: Provides relational identity and continuity signals.
+- **LTP (Liminal Thread Secure Protocol)**: Transport and event-framing layer in this runtime context.
 
 ## Integration Map
 The following interactions are defined in the core integration:
@@ -91,3 +102,16 @@ open tools/dashboard.html
 - Quick action buttons (Ping, Echo, Custom, Shutdown)
 - Latency tracking
 - Zero dependencies (pure HTML/CSS/JS)
+
+## Scope boundary
+
+LRE-Core is best evaluated as a runnable integration sandbox and demonstration environment.
+
+It is not a production multi-agent operating system, not a certified safety enforcement layer, and not the canonical source of semantics for every protocol it integrates.
+
+Short version:
+
+```text
+LRE-Core is the lab bench.
+The Liminal Evidence Stack is the formal reviewer path.
+```
