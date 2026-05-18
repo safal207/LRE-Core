@@ -47,6 +47,13 @@ class Events:
     GET_DB_STATS = "get_db_stats"
     DB_STATS_RESULT = "db_stats_result"
 
+    # Auth events
+    AUTH_LOGIN = "auth_login"
+    AUTH_TOKEN = "auth_token"
+    AUTH_REQUEST = "auth_request"
+    AUTH_SUCCESS = "auth_success"
+    AUTH_FAILURE = "auth_failure"
+
     # Error events
     ERROR = "error"
 
